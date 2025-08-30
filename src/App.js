@@ -20,6 +20,8 @@ function App() {
   const [editingItem, setEditingItem] = useState(null);
   const [editDescription, setEditDescription] = useState('');
   const [editAmount, setEditAmount] = useState('');
+  const [editingPerson, setEditingPerson] = useState(null);
+  const [editPersonName, setEditPersonName] = useState('');
 
   // Save to localStorage whenever people data changes
   useEffect(() => {
@@ -138,6 +140,47 @@ function App() {
     setPeople(updatedPeople);
   };
 
+  // Start editing a person's name
+  const startEditPerson = (personId) => {
+    const person = people.find(p => p.id === personId);
+    setEditingPerson(personId);
+    setEditPersonName(person.name);
+  };
+
+  // Cancel editing person name
+  const cancelEditPerson = () => {
+    setEditingPerson(null);
+    setEditPersonName('');
+  };
+
+  // Save edited person name
+  const saveEditPerson = () => {
+    if (!editingPerson || !editPersonName.trim()) return;
+
+    const trimmedName = editPersonName.trim();
+    
+    // Check if another person already has this name (case-insensitive)
+    const existingPerson = people.find(
+      person => person.id !== editingPerson && person.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+    
+    if (existingPerson) {
+      setErrorMessage('A person with this name already exists.');
+      setTimeout(() => setErrorMessage(''), 3000);
+      return;
+    }
+
+    const updatedPeople = people.map(person => {
+      if (person.id === editingPerson) {
+        return { ...person, name: trimmedName };
+      }
+      return person;
+    });
+
+    setPeople(updatedPeople);
+    cancelEditPerson();
+  };
+
   // Clear all data
   const clearAllData = () => {
     if (window.confirm('Are you sure you want to clear all data? This cannot be undone.')) {
@@ -147,6 +190,7 @@ function App() {
       setDescription('');
       setErrorMessage('');
       cancelEdit();
+      cancelEditPerson();
       localStorage.removeItem('splitsies-people');
     }
   };
@@ -321,7 +365,7 @@ function App() {
 
   return (
     <div className="App">
-      <div className="container">
+      <div className={`container ${people.length > 0 ? 'has-summary' : ''}`}>
         <header className="header">
           <h1>💰 Splitsies</h1>
           <p>Split expenses fairly among friends</p>
@@ -402,17 +446,56 @@ function App() {
               return (
                 <div key={person.id} className="person-section">
                   <div className="person-header">
-                    <div className="person-info">
-                      <span className="person-name">{person.name}</span>
-                      <span className="person-amount">${personTotal.toFixed(2)}</span>
-                    </div>
-                    <button 
-                      onClick={() => removePerson(person.id)}
-                      className="remove-button"
-                      aria-label="Remove person"
-                    >
-                      ×
-                    </button>
+                    {editingPerson === person.id ? (
+                      // Edit mode for person name
+                      <div className="person-name-edit">
+                        <input
+                          type="text"
+                          value={editPersonName}
+                          onChange={(e) => setEditPersonName(e.target.value)}
+                          className="edit-person-input"
+                          placeholder="Person name"
+                        />
+                        <button 
+                          onClick={saveEditPerson}
+                          className="edit-save-button"
+                          aria-label="Save name"
+                        >
+                          ✓
+                        </button>
+                        <button 
+                          onClick={cancelEditPerson}
+                          className="edit-cancel-button"
+                          aria-label="Cancel editing"
+                        >
+                          ✗
+                        </button>
+                      </div>
+                    ) : (
+                      // Display mode for person name
+                      <>
+                        <div className="person-info">
+                          <span className="person-name">{person.name}</span>
+                          <span className="person-amount">${personTotal.toFixed(2)}</span>
+                        </div>
+                        <div className="person-actions">
+                          <button 
+                            onClick={() => startEditPerson(person.id)}
+                            className="edit-name-button"
+                            aria-label="Edit name"
+                          >
+                            ✎
+                          </button>
+                          <button 
+                            onClick={() => removePerson(person.id)}
+                            className="remove-button"
+                            aria-label="Remove person"
+                          >
+                            ⌫
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                   <div className="person-items">
                     {person.items.map(item => (
@@ -475,7 +558,7 @@ function App() {
                                 className="delete-button"
                                 aria-label="Delete item"
                               >
-                                ×
+                                ⌫
                               </button>
                             </div>
                           </>
@@ -522,6 +605,10 @@ function App() {
             </button>
           </div>
         )}
+
+        <div className="version-tag">
+          v1.0.0
+        </div>
       </div>
     </div>
   );
