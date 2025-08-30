@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import './App.css';
 
 function App() {
@@ -22,6 +24,9 @@ function App() {
   const [editAmount, setEditAmount] = useState('');
   const [editingPerson, setEditingPerson] = useState(null);
   const [editPersonName, setEditPersonName] = useState('');
+  
+  // Ref for the exportable content
+  const exportRef = useRef();
 
   // Save to localStorage whenever people data changes
   useEffect(() => {
@@ -363,6 +368,94 @@ function App() {
     setPeople(people.filter(person => person.id !== id));
   };
 
+  // Export functions
+  const exportToPDF = async () => {
+    if (!exportRef.current || people.length === 0) return;
+
+    try {
+      // Add capturing class to show export header
+      exportRef.current.classList.add('capturing');
+      
+      const canvas = await html2canvas(exportRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true
+      });
+      
+      // Remove capturing class
+      exportRef.current.classList.remove('capturing');
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const imgWidth = 190;
+      const pageHeight = 297;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 10;
+
+      // Add first page
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // Add additional pages if needed
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight + 10;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      const currentDate = new Date().toLocaleDateString();
+      pdf.save(`splitsies-summary-${currentDate}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Error generating PDF. Please try again.');
+      // Make sure to remove capturing class even if there's an error
+      if (exportRef.current) {
+        exportRef.current.classList.remove('capturing');
+      }
+    }
+  };
+
+  const exportToJPG = async () => {
+    if (!exportRef.current || people.length === 0) return;
+
+    try {
+      // Add capturing class to show export header
+      exportRef.current.classList.add('capturing');
+      
+      const canvas = await html2canvas(exportRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        allowTaint: true
+      });
+      
+      // Remove capturing class
+      exportRef.current.classList.remove('capturing');
+
+      // Create download link
+      const link = document.createElement('a');
+      const currentDate = new Date().toLocaleDateString().replace(/\//g, '-');
+      link.download = `splitsies-summary-${currentDate}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.9);
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error generating JPG:', error);
+      alert('Error generating JPG. Please try again.');
+      // Make sure to remove capturing class even if there's an error
+      if (exportRef.current) {
+        exportRef.current.classList.remove('capturing');
+      }
+    }
+  };
+
   return (
     <div className="App">
       <div className={`container ${people.length > 0 ? 'has-summary' : ''}`}>
@@ -435,8 +528,37 @@ function App() {
                 <span className="stat-value">{people.length}</span>
               </div>
             </div>
+
           </div>
         )}
+
+        <div ref={exportRef} className="exportable-content">
+          {people.length > 0 && (
+            <div className="export-header">
+              <h2>💰 Splitsies - Expense Summary</h2>
+              <p className="export-date">Generated on {new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}</p>
+              <p className="export-time">at {new Date().toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })}</p>
+              <div className="export-summary">
+                <div className="export-stat">
+                  <strong>Total: ${total.toFixed(2)}</strong>
+                </div>
+                <div className="export-stat">
+                  <strong>Per Person: ${averagePerPerson.toFixed(2)}</strong>
+                </div>
+                <div className="export-stat">
+                  <strong>People: {people.length}</strong>
+                </div>
+              </div>
+            </div>
+          )}
 
         {people.length > 0 && (
           <div className="people-list">
@@ -587,6 +709,7 @@ function App() {
             </div>
           </div>
         )}
+        </div>
 
         {people.length === 0 && (
           <div className="empty-state">
@@ -596,18 +719,34 @@ function App() {
 
         {people.length > 0 && (
           <div className="new-session-section">
-            <button 
-              onClick={clearAllData}
-              className="new-session-button"
-              aria-label="Start new session"
-            >
-              New Session
-            </button>
+            <div className="session-actions">
+              <button 
+                onClick={exportToPDF}
+                className="export-button export-pdf"
+                aria-label="Export as PDF"
+              >
+                📄 PDF
+              </button>
+              <button 
+                onClick={exportToJPG}
+                className="export-button export-jpg"
+                aria-label="Export as JPG"
+              >
+                🖼️ JPG
+              </button>
+              <button 
+                onClick={clearAllData}
+                className="new-session-button"
+                aria-label="Start new session"
+              >
+                New Session
+              </button>
+            </div>
           </div>
         )}
 
         <div className="version-tag">
-          v1.0.0
+          v1.1.0
         </div>
       </div>
     </div>
