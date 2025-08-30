@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/splitsies-web/static/css/main.7602bb9d.css",
+    "main.js": "/splitsies-web/static/js/main.46d63449.js",
+    "static/js/453.05492fed.chunk.js": "/splitsies-web/static/js/453.05492fed.chunk.js",
+    "index.html": "/splitsies-web/index.html",
+    "main.7602bb9d.css.map": "/splitsies-web/static/css/main.7602bb9d.css.map",
+    "main.46d63449.js.map": "/splitsies-web/static/js/main.46d63449.js.map",
+    "453.05492fed.chunk.js.map": "/splitsies-web/static/js/453.05492fed.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.7602bb9d.css",
+    "static/js/main.46d63449.js"
+  ]
+}
