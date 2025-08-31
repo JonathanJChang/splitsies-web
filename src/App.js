@@ -99,22 +99,7 @@ function App() {
     setErrorMessage('');
   };
 
-  // Start editing an item
-  const startEditItem = (personId, itemId) => {
-    // Cancel any existing edits first (single edit mode)
-    if (editingPerson) {
-      cancelEditPerson();
-    }
-    if (editingItem && (editingItem.personId !== personId || editingItem.itemId !== itemId)) {
-      cancelEdit();
-    }
-    
-    const person = people.find(p => p.id === personId);
-    const item = person.items.find(i => i.id === itemId);
-    setEditingItem({ personId, itemId });
-    setEditDescription(item.description);
-    setEditAmount(item.amount.toString());
-  };
+
 
   // Cancel editing
   const cancelEdit = () => {
@@ -173,21 +158,7 @@ function App() {
     setPeople(updatedPeople);
   };
 
-  // Start editing a person's name and weight
-  const startEditPerson = (personId) => {
-    // Cancel any existing edits first (single edit mode)
-    if (editingItem) {
-      cancelEdit();
-    }
-    if (editingPerson && editingPerson !== personId) {
-      cancelEditPerson();
-    }
-    
-    const person = people.find(p => p.id === personId);
-    setEditingPerson(personId);
-    setEditPersonName(person.name);
-    setEditPersonWeight(person.weight?.toString() || '1');
-  };
+
 
   // Cancel editing person name and weight
   const cancelEditPerson = () => {
