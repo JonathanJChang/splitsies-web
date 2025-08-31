@@ -2,6 +2,31 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.2.0] - 2024-12-30
+
+### Added
+- **Weighted Shares System** - Revolutionary feature allowing proportional expense splitting
+- **Shares Input Controls** - Mobile-friendly +/- buttons for selecting shares (1-10)
+- **Weighted Calculations** - Smart algorithm calculates splits based on shares, not just equal division
+- **Shares Display** - Shows share indicators (×2, ×3) next to contributor names when > 1
+- **Splits Context** - "Who Pays Whom" section displays shares for full transparency
+- **Share Validation** - Ensures shares are whole numbers between 1-10
+
+### Changed
+- **Summary Statistics** - Updated to show "Per Share" cost and "Total Shares" instead of per-person
+- **Export Headers** - Updated export summaries to reflect weighted share calculations
+- **Mobile UX** - Enhanced mobile touch interactions for better usability
+- **Input Consistency** - All form inputs now have matching heights and styling
+- **Terminology** - Changed "Weight" to "Shares" for clearer user understanding
+
+### Technical
+- Completely rebuilt calculation engine for weighted splitting
+- Added mobile-optimized number input controls with +/- buttons
+- Enhanced data persistence to include share information
+- Improved mobile touch detection and interaction patterns
+
+---
+
 ## [1.1.1] - 2024-12-30
 
 ### Added

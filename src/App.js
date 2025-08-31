@@ -17,12 +17,14 @@ function App() {
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
+  const [weight, setWeight] = useState('1');
   const [errorMessage, setErrorMessage] = useState('');
   const [editingItem, setEditingItem] = useState(null);
   const [editDescription, setEditDescription] = useState('');
   const [editAmount, setEditAmount] = useState('');
   const [editingPerson, setEditingPerson] = useState(null);
   const [editPersonName, setEditPersonName] = useState('');
+  const [editPersonWeight, setEditPersonWeight] = useState('1');
   
   // Mobile touch states for showing action buttons
   const [mobileActiveItem, setMobileActiveItem] = useState(null);
@@ -74,11 +76,24 @@ function App() {
     // If invalid format, don't update the state (prevents typing)
   };
 
+  // Handle weight input validation
+  const handleWeightChange = (e) => {
+    const value = e.target.value;
+    setWeight(value);
+  };
+
+  // Handle edit weight input validation
+  const handleEditWeightChange = (e) => {
+    const value = e.target.value;
+    setEditPersonWeight(value);
+  };
+
   // Clear all form fields
   const clearForm = () => {
     setName('');
     setAmount('');
     setDescription('');
+    setWeight('1');
     setErrorMessage('');
   };
 
@@ -148,24 +163,34 @@ function App() {
     setPeople(updatedPeople);
   };
 
-  // Start editing a person's name
+  // Start editing a person's name and weight
   const startEditPerson = (personId) => {
     const person = people.find(p => p.id === personId);
     setEditingPerson(personId);
     setEditPersonName(person.name);
+    setEditPersonWeight(person.weight?.toString() || '1');
   };
 
-  // Cancel editing person name
+  // Cancel editing person name and weight
   const cancelEditPerson = () => {
     setEditingPerson(null);
     setEditPersonName('');
+    setEditPersonWeight('1');
   };
 
-  // Save edited person name
+  // Save edited person name and weight
   const saveEditPerson = () => {
-    if (!editingPerson || !editPersonName.trim()) return;
+    if (!editingPerson || !editPersonName.trim() || !editPersonWeight) return;
 
     const trimmedName = editPersonName.trim();
+    const parsedWeight = parseInt(editPersonWeight);
+    
+    // Validate weight
+    if (isNaN(parsedWeight) || parsedWeight < 1) {
+      setErrorMessage('Shares must be a whole number of 1 or greater.');
+      setTimeout(() => setErrorMessage(''), 3000);
+      return;
+    }
     
     // Check if another person already has this name (case-insensitive)
     const existingPerson = people.find(
@@ -180,7 +205,7 @@ function App() {
 
     const updatedPeople = people.map(person => {
       if (person.id === editingPerson) {
-        return { ...person, name: trimmedName };
+        return { ...person, name: trimmedName, weight: parsedWeight };
       }
       return person;
     });
@@ -196,6 +221,7 @@ function App() {
       setName('');
       setAmount('');
       setDescription('');
+      setWeight('1');
       setErrorMessage('');
       cancelEdit();
       cancelEditPerson();
@@ -203,33 +229,43 @@ function App() {
     }
   };
 
-  // Calculate totals and splits
+  // Calculate totals and weighted splits
   const total = people.reduce((sum, person) => {
     return sum + person.items.reduce((itemSum, item) => itemSum + item.amount, 0);
   }, 0);
-  const averagePerPerson = people.length > 0 ? total / people.length : 0;
+  
+  const totalShares = people.reduce((sum, person) => {
+    return sum + (person.weight || 1);
+  }, 0);
+  
+  const costPerShare = totalShares > 0 ? total / totalShares : 0;
 
-  // Calculate who owes whom
+  // Calculate who owes whom (weighted)
   const calculateSplits = () => {
     if (people.length === 0) return [];
     
-    // Calculate how much each person owes or is owed
+    // Calculate how much each person owes or is owed based on their weight
     const balances = people.map(person => {
       const personTotal = person.items.reduce((sum, item) => sum + item.amount, 0);
+      const personWeight = person.weight || 1;
+      const personOwes = costPerShare * personWeight;
       return {
         name: person.name,
-        balance: personTotal - averagePerPerson
+        weight: personWeight,
+        balance: personTotal - personOwes
       };
     });
 
     // Separate debtors and creditors
     const debtors = balances.filter(person => person.balance < 0).map(person => ({
       name: person.name,
+      weight: person.weight,
       owes: Math.abs(person.balance)
     }));
     
     const creditors = balances.filter(person => person.balance > 0).map(person => ({
       name: person.name,
+      weight: person.weight,
       owed: person.balance
     }));
 
@@ -247,7 +283,9 @@ function App() {
       if (transferAmount > 0.01) { // Avoid tiny amounts due to floating point precision
         transfers.push({
           from: debtor.name,
+          fromWeight: debtor.weight,
           to: creditor.name,
+          toWeight: creditor.weight,
           amount: transferAmount
         });
       }
@@ -283,6 +321,7 @@ function App() {
       
       const trimmedName = name.trim();
       const trimmedDescription = description.trim();
+      const parsedWeight = parseInt(weight) || 1;
       
       // If description is provided but amount is 0, show error and don't add the item
       if (trimmedDescription && contributionAmount === 0) {
@@ -349,6 +388,7 @@ function App() {
         const newPerson = {
           id: Date.now(),
           name: trimmedName,
+          weight: parsedWeight,
           items: [
             {
               id: Date.now(),
@@ -372,39 +412,56 @@ function App() {
   };
 
   // Mobile touch handlers
-  const handleMobileItemTouch = (personId, itemId, e) => {
-    e.preventDefault();
+  const isMobile = () => {
+    return window.innerWidth <= 768;
+  };
+
+  const handleMobileItemClick = (personId, itemId, action) => {
+    if (!isMobile()) {
+      // Desktop - execute action immediately
+      action();
+      return;
+    }
+    
+    // Mobile - two-tap system
     const itemKey = `${personId}-${itemId}`;
     
     if (mobileActiveItem === itemKey) {
-      // Second tap - allow action to proceed
-      return true;
+      // Second tap - execute action
+      action();
+      setMobileActiveItem(null);
     } else {
       // First tap - show buttons
       setMobileActiveItem(itemKey);
-      setMobileActivePerson(null); // Hide person buttons
-      return false;
+      setMobileActivePerson(null);
     }
   };
 
-  const handleMobilePersonTouch = (personId, e) => {
-    e.preventDefault();
+  const handleMobilePersonClick = (personId, action) => {
+    if (!isMobile()) {
+      // Desktop - execute action immediately
+      action();
+      return;
+    }
     
+    // Mobile - two-tap system
     if (mobileActivePerson === personId) {
-      // Second tap - allow action to proceed
-      return true;
+      // Second tap - execute action
+      action();
+      setMobileActivePerson(null);
     } else {
       // First tap - show buttons
       setMobileActivePerson(personId);
-      setMobileActiveItem(null); // Hide item buttons
-      return false;
+      setMobileActiveItem(null);
     }
   };
 
   // Clear mobile active states when clicking elsewhere
   const clearMobileStates = () => {
-    setMobileActiveItem(null);
-    setMobileActivePerson(null);
+    if (isMobile()) {
+      setMobileActiveItem(null);
+      setMobileActivePerson(null);
+    }
   };
 
   // Export function
@@ -491,6 +548,36 @@ function App() {
               onChange={handleAmountChange}
               className="input-field"
             />
+            <div className="weight-input-group">
+              <label className="weight-label">Shares:</label>
+              <div className="weight-controls">
+                <button
+                  type="button"
+                  className="weight-button weight-decrease"
+                  onClick={() => setWeight(Math.max(1, parseInt(weight) - 1 || 1))}
+                  disabled={parseInt(weight) <= 1}
+                >
+                  −
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={weight}
+                  onChange={handleWeightChange}
+                  className="weight-input"
+                  readOnly
+                />
+                <button
+                  type="button"
+                  className="weight-button weight-increase"
+                  onClick={() => setWeight(Math.min(10, parseInt(weight) + 1 || 1))}
+                  disabled={parseInt(weight) >= 10}
+                >
+                  +
+                </button>
+              </div>
+            </div>
           </div>
           <button type="submit" className="add-button">
             Add Item
@@ -510,12 +597,12 @@ function App() {
                 <span className="stat-value">${total.toFixed(2)}</span>
               </div>
               <div className="stat">
-                <span className="stat-label">Per Person</span>
-                <span className="stat-value">${averagePerPerson.toFixed(2)}</span>
+                <span className="stat-label">Per Share</span>
+                <span className="stat-value">${costPerShare.toFixed(2)}</span>
               </div>
               <div className="stat">
-                <span className="stat-label">People</span>
-                <span className="stat-value">{people.length}</span>
+                <span className="stat-label">Total Shares</span>
+                <span className="stat-value">{totalShares}</span>
               </div>
             </div>
 
@@ -541,10 +628,10 @@ function App() {
                   <strong>Total: ${total.toFixed(2)}</strong>
                 </div>
                 <div className="export-stat">
-                  <strong>Per Person: ${averagePerPerson.toFixed(2)}</strong>
+                  <strong>Per Share: ${costPerShare.toFixed(2)}</strong>
                 </div>
                 <div className="export-stat">
-                  <strong>People: {people.length}</strong>
+                  <strong>Total Shares: {totalShares}</strong>
                 </div>
               </div>
             </div>
@@ -568,6 +655,33 @@ function App() {
                           className="edit-person-input"
                           placeholder="Person name"
                         />
+                        <div className="edit-weight-controls">
+                          <button
+                            type="button"
+                            className="weight-button weight-decrease"
+                            onClick={() => setEditPersonWeight(Math.max(1, parseInt(editPersonWeight) - 1 || 1))}
+                            disabled={parseInt(editPersonWeight) <= 1}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            max="10"
+                            value={editPersonWeight}
+                            onChange={handleEditWeightChange}
+                            className="edit-weight-input"
+                            readOnly
+                          />
+                          <button
+                            type="button"
+                            className="weight-button weight-increase"
+                            onClick={() => setEditPersonWeight(Math.min(10, parseInt(editPersonWeight) + 1 || 1))}
+                            disabled={parseInt(editPersonWeight) >= 10}
+                          >
+                            +
+                          </button>
+                        </div>
                         <button 
                           onClick={saveEditPerson}
                           className="edit-save-button"
@@ -588,35 +702,32 @@ function App() {
                       <>
                         <div 
                           className="person-info"
-                          onTouchStart={(e) => {
-                            if (window.innerWidth <= 480) {
-                              handleMobilePersonTouch(person.id, e);
+                          onClick={(e) => {
+                            if (isMobile()) {
+                              e.stopPropagation();
+                              setMobileActivePerson(mobileActivePerson === person.id ? null : person.id);
+                              setMobileActiveItem(null);
                             }
                           }}
                         >
-                          <span className="person-name">{person.name}</span>
+                          <span className="person-name">
+                            {person.name} 
+                            {person.weight && person.weight !== 1 && (
+                              <span className="person-weight"> (×{person.weight})</span>
+                            )}
+                          </span>
                           <span className="person-amount">${personTotal.toFixed(2)}</span>
                         </div>
                         <div className={`person-actions ${mobileActivePerson === person.id ? 'mobile-active' : ''}`}>
                           <button 
-                            onClick={(e) => {
-                              if (window.innerWidth <= 480) {
-                                if (!handleMobilePersonTouch(person.id, e)) return;
-                              }
-                              startEditPerson(person.id);
-                            }}
+                            onClick={() => handleMobilePersonClick(person.id, () => startEditPerson(person.id))}
                             className="edit-name-button"
                             aria-label="Edit name"
                           >
                             ✎
                           </button>
                           <button 
-                            onClick={(e) => {
-                              if (window.innerWidth <= 480) {
-                                if (!handleMobilePersonTouch(person.id, e)) return;
-                              }
-                              removePerson(person.id);
-                            }}
+                            onClick={() => handleMobilePersonClick(person.id, () => removePerson(person.id))}
                             className="remove-button"
                             aria-label="Remove person"
                           >
@@ -674,9 +785,12 @@ function App() {
                           <>
                             <div 
                               className="item-content"
-                              onTouchStart={(e) => {
-                                if (window.innerWidth <= 480) {
-                                  handleMobileItemTouch(person.id, item.id, e);
+                              onClick={(e) => {
+                                if (isMobile()) {
+                                  e.stopPropagation();
+                                  const itemKey = `${person.id}-${item.id}`;
+                                  setMobileActiveItem(mobileActiveItem === itemKey ? null : itemKey);
+                                  setMobileActivePerson(null);
                                 }
                               }}
                             >
@@ -685,24 +799,14 @@ function App() {
                             </div>
                             <div className={`item-actions ${mobileActiveItem === `${person.id}-${item.id}` ? 'mobile-active' : ''}`}>
                               <button 
-                                onClick={(e) => {
-                                  if (window.innerWidth <= 480) {
-                                    if (!handleMobileItemTouch(person.id, item.id, e)) return;
-                                  }
-                                  startEditItem(person.id, item.id);
-                                }}
+                                onClick={() => handleMobileItemClick(person.id, item.id, () => startEditItem(person.id, item.id))}
                                 className="edit-button"
                                 aria-label="Edit item"
                               >
                                 ✎
                               </button>
                               <button 
-                                onClick={(e) => {
-                                  if (window.innerWidth <= 480) {
-                                    if (!handleMobileItemTouch(person.id, item.id, e)) return;
-                                  }
-                                  deleteItem(person.id, item.id);
-                                }}
+                                onClick={() => handleMobileItemClick(person.id, item.id, () => deleteItem(person.id, item.id))}
                                 className="delete-button"
                                 aria-label="Delete item"
                               >
@@ -726,9 +830,19 @@ function App() {
             <div className="splits-list">
               {splits.map((split, index) => (
                 <div key={index} className="split-item">
-                  <span className="split-from">{split.from}</span>
+                  <span className="split-from">
+                    {split.from}
+                    {split.fromWeight > 1 && (
+                      <span className="split-weight"> (×{split.fromWeight})</span>
+                    )}
+                  </span>
                   <span className="split-arrow">→</span>
-                  <span className="split-to">{split.to}</span>
+                  <span className="split-to">
+                    {split.to}
+                    {split.toWeight > 1 && (
+                      <span className="split-weight"> (×{split.toWeight})</span>
+                    )}
+                  </span>
                   <span className="split-amount">${split.amount.toFixed(2)}</span>
                 </div>
               ))}
@@ -765,7 +879,7 @@ function App() {
         )}
 
         <div className="version-tag">
-          v1.1.1
+          v1.2.0
         </div>
       </div>
     </div>
