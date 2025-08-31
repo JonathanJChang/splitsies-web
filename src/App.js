@@ -26,9 +26,11 @@ function App() {
   const [editPersonName, setEditPersonName] = useState('');
   const [editPersonWeight, setEditPersonWeight] = useState('1');
   
-  // Mobile touch states for showing action buttons
-  const [mobileActiveItem, setMobileActiveItem] = useState(null);
-  const [mobileActivePerson, setMobileActivePerson] = useState(null);
+  // Master edit mode state
+  const [isEditMode, setIsEditMode] = useState(false);
+  
+  // Temporary edit states for master edit mode
+  const [tempEditStates, setTempEditStates] = useState({});
   
   // Ref for the exportable content
   const exportRef = useRef();
@@ -202,6 +204,48 @@ function App() {
     if (editingPerson) {
       cancelEditPerson();
     }
+  };
+
+  // Update temporary edit state
+  const updateTempEditState = (key, updates) => {
+    setTempEditStates(prev => ({
+      ...prev,
+      [key]: { ...prev[key], ...updates }
+    }));
+  };
+
+  // Save all temporary edits to the main state
+  const saveAllTempEdits = () => {
+    const updatedPeople = people.map(person => {
+      const personKey = `person-${person.id}`;
+      const personTemp = tempEditStates[personKey];
+      
+      const updatedItems = person.items.map(item => {
+        const itemKey = `item-${person.id}-${item.id}`;
+        const itemTemp = tempEditStates[itemKey];
+        
+        if (itemTemp) {
+          return {
+            ...item,
+            description: itemTemp.description.trim() || 'miscellaneous',
+            amount: parseFloat(itemTemp.amount) || 0
+          };
+        }
+        return item;
+      });
+
+      if (personTemp) {
+        return {
+          ...person,
+          name: personTemp.name.trim(),
+          weight: parseInt(personTemp.weight) || 1,
+          items: updatedItems
+        };
+      }
+      return { ...person, items: updatedItems };
+    });
+
+    setPeople(updatedPeople);
   };
 
   // Save edited person name and weight
@@ -436,46 +480,32 @@ function App() {
     setPeople(people.filter(person => person.id !== id));
   };
 
-  // Mobile touch handlers
-  const isMobile = () => {
-    return window.innerWidth <= 768;
-  };
-
-  const handleMobileItemClick = (e, personId, itemId, action) => {
-    e.stopPropagation(); // Prevent bubbling to parent onClick handlers
-    
-    // Always execute action immediately when button is clicked
-    action();
-    
-    // Clear mobile states after action
-    if (isMobile()) {
-      setMobileActiveItem(null);
-      setMobileActivePerson(null);
+  // Toggle master edit mode
+  const toggleEditMode = () => {
+    if (isEditMode) {
+      // Exiting edit mode - save all changes and clear temp states
+      saveAllTempEdits();
+      setTempEditStates({});
+      cancelAllEdits();
+      setIsEditMode(false);
+    } else {
+      // Entering edit mode - initialize temp edit states for all items
+      const tempStates = {};
+      people.forEach(person => {
+        tempStates[`person-${person.id}`] = {
+          name: person.name,
+          weight: person.weight || 1
+        };
+        person.items.forEach(item => {
+          tempStates[`item-${person.id}-${item.id}`] = {
+            description: item.description,
+            amount: item.amount.toString()
+          };
+        });
+      });
+      setTempEditStates(tempStates);
+      setIsEditMode(true);
     }
-  };
-
-  const handleMobilePersonClick = (e, personId, action) => {
-    e.stopPropagation(); // Prevent bubbling to parent onClick handlers
-    
-    // Always execute action immediately when button is clicked
-    action();
-    
-    // Clear mobile states after action
-    if (isMobile()) {
-      setMobileActivePerson(null);
-      setMobileActiveItem(null);
-    }
-  };
-
-  // Clear mobile active states when clicking elsewhere
-  const clearMobileStates = () => {
-    if (isMobile()) {
-      setMobileActiveItem(null);
-      setMobileActivePerson(null);
-    }
-    // Cancel all edits when clicking outside edit areas
-    // (Edit areas will use stopPropagation to prevent this)
-    cancelAllEdits();
   };
 
   // Export function
@@ -518,7 +548,7 @@ function App() {
   };
 
   return (
-    <div className="App" onClick={clearMobileStates}>
+    <div className="App">
       <div className={`container ${people.length > 0 ? 'has-summary' : ''}`}>
         <header className="header">
           <h1>💰 Splitsies</h1>
@@ -554,14 +584,16 @@ function App() {
               onChange={(e) => setDescription(e.target.value)}
               className="input-field"
             />
-            <input
-              type="text"
-              inputMode="decimal"
-              placeholder="Amount ($) - optional"
-              value={amount}
-              onChange={handleAmountChange}
-              className="input-field"
-            />
+            <div className="amount-input-group">
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={amount}
+                onChange={handleAmountChange}
+                className="input-field"
+              />
+            </div>
             <div className="weight-input-group">
               <label className="weight-label">Shares:</label>
               <div className="weight-controls">
@@ -653,19 +685,34 @@ function App() {
 
         {people.length > 0 && (
           <div className="people-list">
-            <h3>Contributors</h3>
+            <div className="contributors-header">
+              <h3>Contributors</h3>
+              <button 
+                onClick={toggleEditMode}
+                className={`master-edit-button ${isEditMode ? 'active' : ''}`}
+                aria-label={isEditMode ? 'Confirm changes' : 'Edit contributors'}
+              >
+                {isEditMode ? '✓ Done' : '✎ Edit'}
+              </button>
+            </div>
             {people.map(person => {
               const personTotal = person.items.reduce((sum, item) => sum + item.amount, 0);
               return (
                 <div key={person.id} className="person-section">
                   <div className="person-header">
-                    {editingPerson === person.id ? (
+                    {(editingPerson === person.id || isEditMode) ? (
                       // Edit mode for person name
-                      <div className="person-name-edit" onClick={(e) => e.stopPropagation()}>
+                      <div className="person-name-edit">
                         <input
                           type="text"
-                          value={editPersonName}
-                          onChange={(e) => setEditPersonName(e.target.value)}
+                          value={isEditMode ? (tempEditStates[`person-${person.id}`]?.name || person.name) : editPersonName}
+                          onChange={(e) => {
+                            if (isEditMode) {
+                              updateTempEditState(`person-${person.id}`, { name: e.target.value });
+                            } else {
+                              setEditPersonName(e.target.value);
+                            }
+                          }}
                           className="edit-person-input"
                           placeholder="Person name"
                         />
@@ -673,8 +720,15 @@ function App() {
                           <button
                             type="button"
                             className="weight-button weight-decrease"
-                            onClick={() => setEditPersonWeight(Math.max(1, parseInt(editPersonWeight) - 1 || 1))}
-                            disabled={parseInt(editPersonWeight) <= 1}
+                            onClick={() => {
+                              if (isEditMode) {
+                                const currentWeight = tempEditStates[`person-${person.id}`]?.weight || person.weight || 1;
+                                updateTempEditState(`person-${person.id}`, { weight: Math.max(1, currentWeight - 1) });
+                              } else {
+                                setEditPersonWeight(Math.max(1, parseInt(editPersonWeight) - 1 || 1));
+                              }
+                            }}
+                            disabled={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight || person.weight || 1) <= 1 : parseInt(editPersonWeight) <= 1}
                           >
                             −
                           </button>
@@ -682,7 +736,7 @@ function App() {
                             type="number"
                             min="1"
                             max="10"
-                            value={editPersonWeight}
+                            value={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight || person.weight || 1) : editPersonWeight}
                             onChange={handleEditWeightChange}
                             className="edit-weight-input"
                             readOnly
@@ -690,65 +744,58 @@ function App() {
                           <button
                             type="button"
                             className="weight-button weight-increase"
-                            onClick={() => setEditPersonWeight(Math.min(10, parseInt(editPersonWeight) + 1 || 1))}
-                            disabled={parseInt(editPersonWeight) >= 10}
+                            onClick={() => {
+                              if (isEditMode) {
+                                const currentWeight = tempEditStates[`person-${person.id}`]?.weight || person.weight || 1;
+                                updateTempEditState(`person-${person.id}`, { weight: Math.min(10, currentWeight + 1) });
+                              } else {
+                                setEditPersonWeight(Math.min(10, parseInt(editPersonWeight) + 1 || 1));
+                              }
+                            }}
+                            disabled={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight || person.weight || 1) >= 10 : parseInt(editPersonWeight) >= 10}
                           >
                             +
                           </button>
                         </div>
-                        <button 
-                          onClick={saveEditPerson}
-                          className="edit-save-button"
-                          aria-label="Save name"
-                        >
-                          ✓
-                        </button>
-                        <button 
-                          onClick={cancelEditPerson}
-                          className="edit-cancel-button"
-                          aria-label="Cancel editing"
-                        >
-                          ✗
-                        </button>
-                      </div>
-                    ) : (
-                      // Display mode for person name
-                      <>
-                        <div 
-                          className="person-info"
-                          onClick={(e) => {
-                            if (isMobile()) {
-                              e.stopPropagation();
-                              setMobileActivePerson(mobileActivePerson === person.id ? null : person.id);
-                              setMobileActiveItem(null);
-                            }
-                          }}
-                        >
-                          <span className="person-name">
-                            {person.name} 
-                            {person.weight && person.weight !== 1 && (
-                              <span className="person-weight"> (×{person.weight})</span>
-                            )}
-                          </span>
-                          <span className="person-amount">${personTotal.toFixed(2)}</span>
-                        </div>
-                        <div className={`person-actions ${mobileActivePerson === person.id ? 'mobile-active' : ''}`}>
+                        {!isEditMode && (
+                          <>
+                            <button 
+                              onClick={saveEditPerson}
+                              className="edit-save-button"
+                              aria-label="Save name"
+                            >
+                              ✓
+                            </button>
+                            <button 
+                              onClick={cancelEditPerson}
+                              className="edit-cancel-button"
+                              aria-label="Cancel editing"
+                            >
+                              ✗
+                            </button>
+                          </>
+                        )}
+                        {isEditMode && (
                           <button 
-                            onClick={(e) => handleMobilePersonClick(e, person.id, () => startEditPerson(person.id))}
-                            className="edit-name-button"
-                            aria-label="Edit name"
-                          >
-                            ✎
-                          </button>
-                          <button 
-                            onClick={(e) => handleMobilePersonClick(e, person.id, () => removePerson(person.id))}
+                            onClick={() => removePerson(person.id)}
                             className="remove-button"
                             aria-label="Remove person"
                           >
                             ⌫
                           </button>
-                        </div>
-                      </>
+                        )}
+                      </div>
+                    ) : (
+                      // Display mode for person name (only shown when not in edit mode)
+                      <div className="person-info">
+                        <span className="person-name">
+                          {person.name} 
+                          {person.weight && person.weight !== 1 && (
+                            <span className="person-weight"> (×{person.weight})</span>
+                          )}
+                        </span>
+                        <span className="person-amount">${personTotal.toFixed(2)}</span>
+                      </div>
                     )}
                   </div>
                   <div className="person-items">
@@ -761,73 +808,75 @@ function App() {
                             : ''
                         }`}
                       >
-                        {editingItem && editingItem.personId === person.id && editingItem.itemId === item.id ? (
+                        {(editingItem && editingItem.personId === person.id && editingItem.itemId === item.id) || isEditMode ? (
                           // Edit mode
-                          <div className="item-edit-mode" onClick={(e) => e.stopPropagation()}>
+                          <div className="item-edit-mode">
                             <input
                               type="text"
-                              value={editDescription}
-                              onChange={(e) => setEditDescription(e.target.value)}
+                              value={isEditMode ? (tempEditStates[`item-${person.id}-${item.id}`]?.description || item.description) : editDescription}
+                              onChange={(e) => {
+                                if (isEditMode) {
+                                  updateTempEditState(`item-${person.id}-${item.id}`, { description: e.target.value });
+                                } else {
+                                  setEditDescription(e.target.value);
+                                }
+                              }}
                               placeholder="Description"
                               className="edit-input edit-description"
                             />
-                            <input
-                              type="text"
-                              inputMode="decimal"
-                              value={editAmount}
-                              onChange={handleEditAmountChange}
-                              placeholder="Amount"
-                              className="edit-input edit-amount"
-                            />
-                            <button 
-                              onClick={saveEditItem}
-                              className="edit-save-button"
-                              aria-label="Save changes"
-                            >
-                              ✓
-                            </button>
-                            <button 
-                              onClick={cancelEdit}
-                              className="edit-cancel-button"
-                              aria-label="Cancel editing"
-                            >
-                              ✗
-                            </button>
-                          </div>
-                        ) : (
-                          // Display mode
-                          <>
-                            <div 
-                              className="item-content"
-                              onClick={(e) => {
-                                if (isMobile()) {
-                                  e.stopPropagation();
-                                  const itemKey = `${person.id}-${item.id}`;
-                                  setMobileActiveItem(mobileActiveItem === itemKey ? null : itemKey);
-                                  setMobileActivePerson(null);
-                                }
-                              }}
-                            >
-                              <span className="item-description">{item.description}</span>
-                              <span className="item-amount">${item.amount.toFixed(2)}</span>
+                            <div className="amount-input-group">
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                value={isEditMode ? (tempEditStates[`item-${person.id}-${item.id}`]?.amount || item.amount.toString()) : editAmount}
+                                onChange={(e) => {
+                                  if (isEditMode) {
+                                    // Apply same decimal validation as handleEditAmountChange
+                                    if (e.target.value === '' || /^\d*\.?\d{0,2}$/.test(e.target.value)) {
+                                      updateTempEditState(`item-${person.id}-${item.id}`, { amount: e.target.value });
+                                    }
+                                  } else {
+                                    handleEditAmountChange(e);
+                                  }
+                                }}
+                                placeholder="0.00"
+                                className="edit-input edit-amount"
+                              />
                             </div>
-                            <div className={`item-actions ${mobileActiveItem === `${person.id}-${item.id}` ? 'mobile-active' : ''}`}>
+                            {!isEditMode && (
+                              <>
+                                <button 
+                                  onClick={saveEditItem}
+                                  className="edit-save-button"
+                                  aria-label="Save changes"
+                                >
+                                  ✓
+                                </button>
+                                <button 
+                                  onClick={cancelEdit}
+                                  className="edit-cancel-button"
+                                  aria-label="Cancel editing"
+                                >
+                                  ✗
+                                </button>
+                              </>
+                            )}
+                            {isEditMode && (
                               <button 
-                                onClick={(e) => handleMobileItemClick(e, person.id, item.id, () => startEditItem(person.id, item.id))}
-                                className="edit-button"
-                                aria-label="Edit item"
-                              >
-                                ✎
-                              </button>
-                              <button 
-                                onClick={(e) => handleMobileItemClick(e, person.id, item.id, () => deleteItem(person.id, item.id))}
+                                onClick={() => deleteItem(person.id, item.id)}
                                 className="delete-button"
                                 aria-label="Delete item"
                               >
                                 ⌫
                               </button>
-                            </div>
-                          </>
+                            )}
+                          </div>
+                        ) : (
+                          // Display mode (only shown when not in edit mode)
+                          <div className="item-content">
+                            <span className="item-description">{item.description}</span>
+                            <span className="item-amount">${item.amount.toFixed(2)}</span>
+                          </div>
                         )}
                       </div>
                     ))}
@@ -893,7 +942,7 @@ function App() {
         )}
 
         <div className="version-tag">
-          v1.2.1
+          v1.2.2
         </div>
       </div>
     </div>

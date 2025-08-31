@@ -227,11 +227,51 @@ body {
   padding: 15px 20px;
 }
 
-.people-list h3 {
+/* Contributors header with master edit button */
+.contributors-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 12px;
+}
+
+.contributors-header h3 {
+  margin: 0;
   color: #2d3748;
   font-size: 1rem;
   font-weight: 600;
+}
+
+.master-edit-button {
+  padding: 6px 12px;
+  border: 2px solid #6c757d;
+  border-radius: 6px;
+  background: white;
+  color: #6c757d;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.master-edit-button:hover {
+  background: #6c757d;
+  color: white;
+  transform: translateY(-1px);
+}
+
+.master-edit-button.active {
+  background: #28a745;
+  border-color: #28a745;
+  color: white;
+}
+
+.master-edit-button.active:hover {
+  background: #218838;
+  border-color: #218838;
 }
 
 .person-section {
@@ -284,6 +324,26 @@ body {
   justify-content: space-between;
   align-items: center;
   flex: 1;
+  position: relative;
+  padding-right: 40px; /* Space for delete button when in edit mode */
+}
+
+.item-content.editable {
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.item-content.editable:hover {
+  background-color: rgba(108, 117, 125, 0.1);
+}
+
+.item-content .delete-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .item-description {
@@ -301,18 +361,9 @@ body {
 .item-actions {
   display: flex;
   gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
-.item-detail:hover .item-actions {
-  opacity: 1;
-}
 
-/* Mobile-specific: show item actions when active */
-.item-actions.mobile-active {
-  opacity: 1 !important;
-}
 
 .edit-button,
 .delete-button {
@@ -360,6 +411,15 @@ body {
   align-items: center;
   gap: 8px;
   width: 100%;
+  position: relative;
+  padding-right: 40px; /* Space for delete button */
+}
+
+.item-edit-mode .delete-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .edit-input {
@@ -384,6 +444,28 @@ body {
 
 .edit-amount {
   width: 80px;
+}
+
+/* Dollar prefix for amount inputs */
+.amount-input-group {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.amount-input-group::before {
+  content: '$';
+  position: absolute;
+  left: 10px;
+  color: #6c757d;
+  font-weight: 600;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.amount-input-group .edit-input,
+.amount-input-group .input-field {
+  padding-left: 24px; /* Space for $ symbol */
 }
 
 .edit-save-button,
@@ -427,6 +509,26 @@ body {
   align-items: center;
   gap: 8px;
   flex: 1;
+  position: relative;
+  padding-right: 40px; /* Space for delete button when in edit mode */
+}
+
+.person-name.editable {
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.person-name.editable:hover {
+  background-color: rgba(108, 117, 125, 0.1);
+}
+
+.person-info .remove-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .person-name {
@@ -444,18 +546,9 @@ body {
 .person-actions {
   display: flex;
   gap: 6px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
 }
 
-.person-header:hover .person-actions {
-  opacity: 1;
-}
 
-/* Mobile-specific: show actions when active */
-.person-actions.mobile-active {
-  opacity: 1 !important;
-}
 
 .edit-name-button {
   width: 28px;
@@ -485,6 +578,15 @@ body {
   gap: 6px;
   flex: 1;
   width: 100%;
+  position: relative;
+  padding-right: 40px; /* Space for delete button */
+}
+
+.person-name-edit .remove-button {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .edit-person-input {
@@ -897,39 +999,9 @@ body {
     justify-content: center;
   }
 
-  /* Mobile touch improvements */
-  .person-info {
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 6px;
-    transition: background-color 0.2s ease;
-  }
 
-  .person-info:active {
-    background-color: rgba(0, 0, 0, 0.05);
-  }
 
-  .item-content {
-    cursor: pointer;
-    padding: 8px;
-    border-radius: 6px;
-    transition: background-color 0.2s ease;
-  }
 
-  .item-content:active {
-    background-color: rgba(0, 0, 0, 0.05);
-  }
-
-  /* Make buttons slightly larger on mobile for easier tapping */
-  .person-actions.mobile-active .edit-name-button,
-  .person-actions.mobile-active .remove-button,
-  .item-actions.mobile-active .edit-button,
-  .item-actions.mobile-active .delete-button {
-    width: 32px;
-    height: 32px;
-    font-size: 0.95rem;
-    transform: scale(1.0); /* Prevent additional hover scaling on mobile */
-  }
 
   /* Adjust edit mode layout for mobile */
   .person-name-edit {

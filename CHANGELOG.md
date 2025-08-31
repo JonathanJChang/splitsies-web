@@ -2,24 +2,35 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.2.2] - 2024-12-30
+
+### Added
+- **Master Edit Mode** - Single button toggles editing for ALL contributors and items
+- **Bulk Editing** - All entries automatically show edit inputs when edit mode is active
+- **Right-Aligned Delete Buttons** - Consistent positioning for easy mobile access
+
+### Changed
+- **Simplified Editing** - No more individual edit buttons, just click master edit
+- **Streamlined Interface** - Clean display mode vs comprehensive edit mode
+- **Mobile-Optimized** - Removed complex hover states and touch handlers
+
+### Removed
+- Individual edit/delete buttons on each entry
+- Complex mobile touch detection and hover effects
+- Multi-tap mobile interactions
+
+---
+
 ## [1.2.1] - 2024-12-30
 
 ### Fixed
-- **Mobile Edit/Delete Buttons** - Fixed broken mobile interactions where buttons required multiple taps
-- **Edit Mode Layout** - Fixed buttons getting pushed off-screen during editing on mobile
-- **Single Edit Mode** - Only one item can be edited at a time; starting new edit cancels previous
-- **Click-Outside-to-Cancel** - Tapping outside edit areas now cancels active edits
-- **Event Propagation** - Fixed conflicts between mobile touch handlers and edit interactions
+- **Mobile Edit Buttons** - Fixed buttons requiring multiple taps on mobile devices
+- **Edit Layout** - Fixed edit buttons getting cut off on small screens
+- **Single Edit Mode** - Only one item can be edited at a time for cleaner experience
+- **Touch Interactions** - Improved mobile tap responsiveness and button sizing
 
-### Changed
-- **Mobile Button Scaling** - Reduced button enlargement from 36px to 32px for smoother transitions
-- **Edit Layout Spacing** - Tighter gaps and fixed-width controls for better mobile fit
-- **Hover Effects** - Desktop-only hover scaling to prevent mobile touch conflicts
-
-### Technical
-- Enhanced event handling with proper `stopPropagation()` for edit containers
-- Improved mobile detection and touch interaction patterns
-- Better flex layout management for edit mode components
+### Added
+- **Click Outside to Cancel** - Tap anywhere outside edit area to cancel editing
 
 ---
 
