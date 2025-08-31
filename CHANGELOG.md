@@ -2,12 +2,26 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.1.1] - 2024-12-30
+
+### Added
+- **Mobile Touch UX** - Two-tap system for edit/delete buttons on mobile devices
+
+### Changed
+- Removed PDF export functionality (kept JPG export only)
+- Export button styling matches "New Session" button for consistency
+- Improved mobile UX - first tap shows buttons, second tap performs action
+
+### Removed
+- PDF export functionality and jsPDF dependency
+
+---
+
 ## [1.1.0] - 2024-12-30
 
 ### Added
-- **PDF Export** - Generate professional PDF summaries with timestamps
-- **JPG Export** - Create high-quality image exports for sharing
-- **Export Buttons** - Gray-styled buttons positioned beside "New Session"
+- **JPG Export** - Create high-quality image exports for sharing with timestamps
+- **Export Button** - Gray-styled button positioned beside "New Session"
 
 ### Changed
 - Mobile-responsive export button layout

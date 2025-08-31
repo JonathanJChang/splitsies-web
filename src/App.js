@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import './App.css';
 
@@ -24,6 +23,10 @@ function App() {
   const [editAmount, setEditAmount] = useState('');
   const [editingPerson, setEditingPerson] = useState(null);
   const [editPersonName, setEditPersonName] = useState('');
+  
+  // Mobile touch states for showing action buttons
+  const [mobileActiveItem, setMobileActiveItem] = useState(null);
+  const [mobileActivePerson, setMobileActivePerson] = useState(null);
   
   // Ref for the exportable content
   const exportRef = useRef();
@@ -368,56 +371,43 @@ function App() {
     setPeople(people.filter(person => person.id !== id));
   };
 
-  // Export functions
-  const exportToPDF = async () => {
-    if (!exportRef.current || people.length === 0) return;
-
-    try {
-      // Add capturing class to show export header
-      exportRef.current.classList.add('capturing');
-      
-      const canvas = await html2canvas(exportRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        allowTaint: true
-      });
-      
-      // Remove capturing class
-      exportRef.current.classList.remove('capturing');
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      const imgWidth = 190;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 10;
-
-      // Add first page
-      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // Add additional pages if needed
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight + 10;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      const currentDate = new Date().toLocaleDateString();
-      pdf.save(`splitsies-summary-${currentDate}.pdf`);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
-      // Make sure to remove capturing class even if there's an error
-      if (exportRef.current) {
-        exportRef.current.classList.remove('capturing');
-      }
+  // Mobile touch handlers
+  const handleMobileItemTouch = (personId, itemId, e) => {
+    e.preventDefault();
+    const itemKey = `${personId}-${itemId}`;
+    
+    if (mobileActiveItem === itemKey) {
+      // Second tap - allow action to proceed
+      return true;
+    } else {
+      // First tap - show buttons
+      setMobileActiveItem(itemKey);
+      setMobileActivePerson(null); // Hide person buttons
+      return false;
     }
   };
+
+  const handleMobilePersonTouch = (personId, e) => {
+    e.preventDefault();
+    
+    if (mobileActivePerson === personId) {
+      // Second tap - allow action to proceed
+      return true;
+    } else {
+      // First tap - show buttons
+      setMobileActivePerson(personId);
+      setMobileActiveItem(null); // Hide item buttons
+      return false;
+    }
+  };
+
+  // Clear mobile active states when clicking elsewhere
+  const clearMobileStates = () => {
+    setMobileActiveItem(null);
+    setMobileActivePerson(null);
+  };
+
+  // Export function
 
   const exportToJPG = async () => {
     if (!exportRef.current || people.length === 0) return;
@@ -457,7 +447,7 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <div className="App" onClick={clearMobileStates}>
       <div className={`container ${people.length > 0 ? 'has-summary' : ''}`}>
         <header className="header">
           <h1>💰 Splitsies</h1>
@@ -596,20 +586,37 @@ function App() {
                     ) : (
                       // Display mode for person name
                       <>
-                        <div className="person-info">
+                        <div 
+                          className="person-info"
+                          onTouchStart={(e) => {
+                            if (window.innerWidth <= 480) {
+                              handleMobilePersonTouch(person.id, e);
+                            }
+                          }}
+                        >
                           <span className="person-name">{person.name}</span>
                           <span className="person-amount">${personTotal.toFixed(2)}</span>
                         </div>
-                        <div className="person-actions">
+                        <div className={`person-actions ${mobileActivePerson === person.id ? 'mobile-active' : ''}`}>
                           <button 
-                            onClick={() => startEditPerson(person.id)}
+                            onClick={(e) => {
+                              if (window.innerWidth <= 480) {
+                                if (!handleMobilePersonTouch(person.id, e)) return;
+                              }
+                              startEditPerson(person.id);
+                            }}
                             className="edit-name-button"
                             aria-label="Edit name"
                           >
                             ✎
                           </button>
                           <button 
-                            onClick={() => removePerson(person.id)}
+                            onClick={(e) => {
+                              if (window.innerWidth <= 480) {
+                                if (!handleMobilePersonTouch(person.id, e)) return;
+                              }
+                              removePerson(person.id);
+                            }}
                             className="remove-button"
                             aria-label="Remove person"
                           >
@@ -665,18 +672,37 @@ function App() {
                         ) : (
                           // Display mode
                           <>
-                            <span className="item-description">{item.description}</span>
-                            <span className="item-amount">${item.amount.toFixed(2)}</span>
-                            <div className="item-actions">
+                            <div 
+                              className="item-content"
+                              onTouchStart={(e) => {
+                                if (window.innerWidth <= 480) {
+                                  handleMobileItemTouch(person.id, item.id, e);
+                                }
+                              }}
+                            >
+                              <span className="item-description">{item.description}</span>
+                              <span className="item-amount">${item.amount.toFixed(2)}</span>
+                            </div>
+                            <div className={`item-actions ${mobileActiveItem === `${person.id}-${item.id}` ? 'mobile-active' : ''}`}>
                               <button 
-                                onClick={() => startEditItem(person.id, item.id)}
+                                onClick={(e) => {
+                                  if (window.innerWidth <= 480) {
+                                    if (!handleMobileItemTouch(person.id, item.id, e)) return;
+                                  }
+                                  startEditItem(person.id, item.id);
+                                }}
                                 className="edit-button"
                                 aria-label="Edit item"
                               >
                                 ✎
                               </button>
                               <button 
-                                onClick={() => deleteItem(person.id, item.id)}
+                                onClick={(e) => {
+                                  if (window.innerWidth <= 480) {
+                                    if (!handleMobileItemTouch(person.id, item.id, e)) return;
+                                  }
+                                  deleteItem(person.id, item.id);
+                                }}
                                 className="delete-button"
                                 aria-label="Delete item"
                               >
@@ -721,18 +747,11 @@ function App() {
           <div className="new-session-section">
             <div className="session-actions">
               <button 
-                onClick={exportToPDF}
-                className="export-button export-pdf"
-                aria-label="Export as PDF"
-              >
-                📄 PDF
-              </button>
-              <button 
                 onClick={exportToJPG}
-                className="export-button export-jpg"
+                className="export-button"
                 aria-label="Export as JPG"
               >
-                🖼️ JPG
+                🖼️ Export
               </button>
               <button 
                 onClick={clearAllData}
@@ -746,7 +765,7 @@ function App() {
         )}
 
         <div className="version-tag">
-          v1.1.0
+          v1.1.1
         </div>
       </div>
     </div>
