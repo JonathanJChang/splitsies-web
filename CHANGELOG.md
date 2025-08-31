@@ -2,6 +2,27 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.2.1] - 2024-12-30
+
+### Fixed
+- **Mobile Edit/Delete Buttons** - Fixed broken mobile interactions where buttons required multiple taps
+- **Edit Mode Layout** - Fixed buttons getting pushed off-screen during editing on mobile
+- **Single Edit Mode** - Only one item can be edited at a time; starting new edit cancels previous
+- **Click-Outside-to-Cancel** - Tapping outside edit areas now cancels active edits
+- **Event Propagation** - Fixed conflicts between mobile touch handlers and edit interactions
+
+### Changed
+- **Mobile Button Scaling** - Reduced button enlargement from 36px to 32px for smoother transitions
+- **Edit Layout Spacing** - Tighter gaps and fixed-width controls for better mobile fit
+- **Hover Effects** - Desktop-only hover scaling to prevent mobile touch conflicts
+
+### Technical
+- Enhanced event handling with proper `stopPropagation()` for edit containers
+- Improved mobile detection and touch interaction patterns
+- Better flex layout management for edit mode components
+
+---
+
 ## [1.2.0] - 2024-12-30
 
 ### Added

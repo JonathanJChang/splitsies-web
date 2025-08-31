@@ -99,6 +99,14 @@ function App() {
 
   // Start editing an item
   const startEditItem = (personId, itemId) => {
+    // Cancel any existing edits first (single edit mode)
+    if (editingPerson) {
+      cancelEditPerson();
+    }
+    if (editingItem && (editingItem.personId !== personId || editingItem.itemId !== itemId)) {
+      cancelEdit();
+    }
+    
     const person = people.find(p => p.id === personId);
     const item = person.items.find(i => i.id === itemId);
     setEditingItem({ personId, itemId });
@@ -165,6 +173,14 @@ function App() {
 
   // Start editing a person's name and weight
   const startEditPerson = (personId) => {
+    // Cancel any existing edits first (single edit mode)
+    if (editingItem) {
+      cancelEdit();
+    }
+    if (editingPerson && editingPerson !== personId) {
+      cancelEditPerson();
+    }
+    
     const person = people.find(p => p.id === personId);
     setEditingPerson(personId);
     setEditPersonName(person.name);
@@ -176,6 +192,16 @@ function App() {
     setEditingPerson(null);
     setEditPersonName('');
     setEditPersonWeight('1');
+  };
+
+  // Cancel all active edits (helper function)
+  const cancelAllEdits = () => {
+    if (editingItem) {
+      cancelEdit();
+    }
+    if (editingPerson) {
+      cancelEditPerson();
+    }
   };
 
   // Save edited person name and weight
@@ -223,8 +249,7 @@ function App() {
       setDescription('');
       setWeight('1');
       setErrorMessage('');
-      cancelEdit();
-      cancelEditPerson();
+      cancelAllEdits();
       localStorage.removeItem('splitsies-people');
     }
   };
@@ -416,42 +441,28 @@ function App() {
     return window.innerWidth <= 768;
   };
 
-  const handleMobileItemClick = (personId, itemId, action) => {
-    if (!isMobile()) {
-      // Desktop - execute action immediately
-      action();
-      return;
-    }
+  const handleMobileItemClick = (e, personId, itemId, action) => {
+    e.stopPropagation(); // Prevent bubbling to parent onClick handlers
     
-    // Mobile - two-tap system
-    const itemKey = `${personId}-${itemId}`;
+    // Always execute action immediately when button is clicked
+    action();
     
-    if (mobileActiveItem === itemKey) {
-      // Second tap - execute action
-      action();
+    // Clear mobile states after action
+    if (isMobile()) {
       setMobileActiveItem(null);
-    } else {
-      // First tap - show buttons
-      setMobileActiveItem(itemKey);
       setMobileActivePerson(null);
     }
   };
 
-  const handleMobilePersonClick = (personId, action) => {
-    if (!isMobile()) {
-      // Desktop - execute action immediately
-      action();
-      return;
-    }
+  const handleMobilePersonClick = (e, personId, action) => {
+    e.stopPropagation(); // Prevent bubbling to parent onClick handlers
     
-    // Mobile - two-tap system
-    if (mobileActivePerson === personId) {
-      // Second tap - execute action
-      action();
+    // Always execute action immediately when button is clicked
+    action();
+    
+    // Clear mobile states after action
+    if (isMobile()) {
       setMobileActivePerson(null);
-    } else {
-      // First tap - show buttons
-      setMobileActivePerson(personId);
       setMobileActiveItem(null);
     }
   };
@@ -462,6 +473,9 @@ function App() {
       setMobileActiveItem(null);
       setMobileActivePerson(null);
     }
+    // Cancel all edits when clicking outside edit areas
+    // (Edit areas will use stopPropagation to prevent this)
+    cancelAllEdits();
   };
 
   // Export function
@@ -647,7 +661,7 @@ function App() {
                   <div className="person-header">
                     {editingPerson === person.id ? (
                       // Edit mode for person name
-                      <div className="person-name-edit">
+                      <div className="person-name-edit" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="text"
                           value={editPersonName}
@@ -720,14 +734,14 @@ function App() {
                         </div>
                         <div className={`person-actions ${mobileActivePerson === person.id ? 'mobile-active' : ''}`}>
                           <button 
-                            onClick={() => handleMobilePersonClick(person.id, () => startEditPerson(person.id))}
+                            onClick={(e) => handleMobilePersonClick(e, person.id, () => startEditPerson(person.id))}
                             className="edit-name-button"
                             aria-label="Edit name"
                           >
                             ✎
                           </button>
                           <button 
-                            onClick={() => handleMobilePersonClick(person.id, () => removePerson(person.id))}
+                            onClick={(e) => handleMobilePersonClick(e, person.id, () => removePerson(person.id))}
                             className="remove-button"
                             aria-label="Remove person"
                           >
@@ -749,7 +763,7 @@ function App() {
                       >
                         {editingItem && editingItem.personId === person.id && editingItem.itemId === item.id ? (
                           // Edit mode
-                          <div className="item-edit-mode">
+                          <div className="item-edit-mode" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="text"
                               value={editDescription}
@@ -799,14 +813,14 @@ function App() {
                             </div>
                             <div className={`item-actions ${mobileActiveItem === `${person.id}-${item.id}` ? 'mobile-active' : ''}`}>
                               <button 
-                                onClick={() => handleMobileItemClick(person.id, item.id, () => startEditItem(person.id, item.id))}
+                                onClick={(e) => handleMobileItemClick(e, person.id, item.id, () => startEditItem(person.id, item.id))}
                                 className="edit-button"
                                 aria-label="Edit item"
                               >
                                 ✎
                               </button>
                               <button 
-                                onClick={() => handleMobileItemClick(person.id, item.id, () => deleteItem(person.id, item.id))}
+                                onClick={(e) => handleMobileItemClick(e, person.id, item.id, () => deleteItem(person.id, item.id))}
                                 className="delete-button"
                                 aria-label="Delete item"
                               >
@@ -879,7 +893,7 @@ function App() {
         )}
 
         <div className="version-tag">
-          v1.2.0
+          v1.2.1
         </div>
       </div>
     </div>
