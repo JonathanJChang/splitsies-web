@@ -2,6 +2,24 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.2.3] - 2024-12-31
+
+### Added
+- **Full-Width Layout** - App now uses entire screen width for better web experience
+- **Internal Input Prefixes** - "Shares:" prefix inside shares input matching $ prefix style
+
+### Changed
+- **Optimized Grid Layout** - Restructured to clean 2x2 grid (Name|Amount, Description|Shares)
+- **Better Space Utilization** - Removed fixed container width for improved desktop/tablet experience
+- **Enhanced Input UX** - Shares input positioned beside amount input with internal labeling
+- **Responsive Padding** - Smart padding adjusts from 40px (desktop) to 15px (mobile)
+
+### Fixed
+- **Dollar Input Cutoff** - Fixed $ input being cut off by giving proper grid space
+- **Layout Proportions** - Better balance between all input fields in 2x2 arrangement
+
+---
+
 ## [1.2.2] - 2024-12-30
 
 ### Added

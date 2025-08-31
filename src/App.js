@@ -214,8 +214,73 @@ function App() {
     }));
   };
 
+  // Check if an item description is duplicate within a person
+  const isItemDescriptionDuplicate = (personId, currentItemId, description) => {
+    if (!isEditMode || !description || !description.trim()) return false;
+    
+    const person = people.find(p => p.id === personId);
+    if (!person) return false;
+    
+    const normalizedDesc = description.trim().toLowerCase();
+    const otherItems = person.items.filter(item => item.id !== currentItemId);
+    
+    return otherItems.some(item => {
+      const itemKey = `item-${personId}-${item.id}`;
+      const itemTemp = tempEditStates[itemKey];
+      const itemDesc = (itemTemp?.description ?? item.description).trim().toLowerCase();
+      return (itemDesc || 'miscellaneous') === (normalizedDesc || 'miscellaneous');
+    });
+  };
+
   // Save all temporary edits to the main state
   const saveAllTempEdits = () => {
+    // First validate that all names are not blank
+    for (const person of people) {
+      const personKey = `person-${person.id}`;
+      const personTemp = tempEditStates[personKey];
+      const nameToCheck = personTemp?.name ?? person.name;
+      
+      if (!nameToCheck || !nameToCheck.trim()) {
+        setErrorMessage('Person names cannot be blank. Please enter a name for all contributors.');
+        setTimeout(() => setErrorMessage(''), 3000);
+        return; // Don't save if validation fails
+      }
+    }
+
+    // Check for duplicate names
+    const names = people.map(person => {
+      const personKey = `person-${person.id}`;
+      const personTemp = tempEditStates[personKey];
+      return (personTemp?.name ?? person.name).trim().toLowerCase();
+    });
+    
+    const duplicateNames = names.filter((name, index) => names.indexOf(name) !== index);
+    if (duplicateNames.length > 0) {
+      setErrorMessage('Duplicate names are not allowed. Please ensure all contributors have unique names.');
+      setTimeout(() => setErrorMessage(''), 3000);
+      return; // Don't save if validation fails
+    }
+
+    // Check for duplicate item descriptions within each contributor
+    for (const person of people) {
+      const itemDescriptions = person.items.map(item => {
+        const itemKey = `item-${person.id}-${item.id}`;
+        const itemTemp = tempEditStates[itemKey];
+        const description = (itemTemp?.description ?? item.description).trim().toLowerCase();
+        return description || 'miscellaneous'; // Default to 'miscellaneous' if empty
+      });
+      
+      const duplicateItems = itemDescriptions.filter((desc, index) => itemDescriptions.indexOf(desc) !== index);
+      if (duplicateItems.length > 0) {
+        const personKey = `person-${person.id}`;
+        const personTemp = tempEditStates[personKey];
+        const personName = personTemp?.name ?? person.name;
+        setErrorMessage(`Duplicate item descriptions found for ${personName}. Please ensure all items have unique descriptions.`);
+        setTimeout(() => setErrorMessage(''), 3000);
+        return; // Don't save if validation fails
+      }
+    }
+
     const updatedPeople = people.map(person => {
       const personKey = `person-${person.id}`;
       const personTemp = tempEditStates[personKey];
@@ -595,7 +660,6 @@ function App() {
               />
             </div>
             <div className="weight-input-group">
-              <label className="weight-label">Shares:</label>
               <div className="weight-controls">
                 <button
                   type="button"
@@ -705,7 +769,7 @@ function App() {
                       <div className="person-name-edit">
                         <input
                           type="text"
-                          value={isEditMode ? (tempEditStates[`person-${person.id}`]?.name || person.name) : editPersonName}
+                          value={isEditMode ? (tempEditStates[`person-${person.id}`]?.name ?? person.name) : editPersonName}
                           onChange={(e) => {
                             if (isEditMode) {
                               updateTempEditState(`person-${person.id}`, { name: e.target.value });
@@ -713,7 +777,11 @@ function App() {
                               setEditPersonName(e.target.value);
                             }
                           }}
-                          className="edit-person-input"
+                          className={`edit-person-input ${
+                            isEditMode && !(tempEditStates[`person-${person.id}`]?.name ?? person.name).trim() 
+                              ? 'invalid' 
+                              : ''
+                          }`}
                           placeholder="Person name"
                         />
                         <div className="edit-weight-controls">
@@ -722,13 +790,13 @@ function App() {
                             className="weight-button weight-decrease"
                             onClick={() => {
                               if (isEditMode) {
-                                const currentWeight = tempEditStates[`person-${person.id}`]?.weight || person.weight || 1;
+                                const currentWeight = tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1;
                                 updateTempEditState(`person-${person.id}`, { weight: Math.max(1, currentWeight - 1) });
                               } else {
                                 setEditPersonWeight(Math.max(1, parseInt(editPersonWeight) - 1 || 1));
                               }
                             }}
-                            disabled={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight || person.weight || 1) <= 1 : parseInt(editPersonWeight) <= 1}
+                            disabled={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1) <= 1 : parseInt(editPersonWeight) <= 1}
                           >
                             −
                           </button>
@@ -736,7 +804,7 @@ function App() {
                             type="number"
                             min="1"
                             max="10"
-                            value={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight || person.weight || 1) : editPersonWeight}
+                                                          value={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1) : editPersonWeight}
                             onChange={handleEditWeightChange}
                             className="edit-weight-input"
                             readOnly
@@ -746,13 +814,13 @@ function App() {
                             className="weight-button weight-increase"
                             onClick={() => {
                               if (isEditMode) {
-                                const currentWeight = tempEditStates[`person-${person.id}`]?.weight || person.weight || 1;
+                                const currentWeight = tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1;
                                 updateTempEditState(`person-${person.id}`, { weight: Math.min(10, currentWeight + 1) });
                               } else {
                                 setEditPersonWeight(Math.min(10, parseInt(editPersonWeight) + 1 || 1));
                               }
                             }}
-                            disabled={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight || person.weight || 1) >= 10 : parseInt(editPersonWeight) >= 10}
+                            disabled={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1) >= 10 : parseInt(editPersonWeight) >= 10}
                           >
                             +
                           </button>
@@ -813,7 +881,7 @@ function App() {
                           <div className="item-edit-mode">
                             <input
                               type="text"
-                              value={isEditMode ? (tempEditStates[`item-${person.id}-${item.id}`]?.description || item.description) : editDescription}
+                              value={isEditMode ? (tempEditStates[`item-${person.id}-${item.id}`]?.description ?? item.description) : editDescription}
                               onChange={(e) => {
                                 if (isEditMode) {
                                   updateTempEditState(`item-${person.id}-${item.id}`, { description: e.target.value });
@@ -822,13 +890,19 @@ function App() {
                                 }
                               }}
                               placeholder="Description"
-                              className="edit-input edit-description"
+                              className={`edit-input edit-description ${
+                                isEditMode && isItemDescriptionDuplicate(
+                                  person.id, 
+                                  item.id, 
+                                  tempEditStates[`item-${person.id}-${item.id}`]?.description ?? item.description
+                                ) ? 'invalid' : ''
+                              }`}
                             />
                             <div className="amount-input-group">
                               <input
                                 type="text"
                                 inputMode="decimal"
-                                value={isEditMode ? (tempEditStates[`item-${person.id}-${item.id}`]?.amount || item.amount.toString()) : editAmount}
+                                value={isEditMode ? (tempEditStates[`item-${person.id}-${item.id}`]?.amount ?? item.amount.toString()) : editAmount}
                                 onChange={(e) => {
                                   if (isEditMode) {
                                     // Apply same decimal validation as handleEditAmountChange
@@ -942,7 +1016,7 @@ function App() {
         )}
 
         <div className="version-tag">
-          v1.2.2
+          v1.2.3
         </div>
       </div>
     </div>
