@@ -2,6 +2,25 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.3.0] - 2024-12-31
+
+### Added
+- **Autocomplete Dropdown** - Smart name input with dropdown showing existing contributors as you type
+- **Keyboard Navigation** - Arrow keys, Enter, and Escape support for dropdown selection
+- **Click Outside to Close** - Intuitive dropdown behavior with proper event handling
+
+### Changed
+- **Enhanced Input UX** - Name field now filters and suggests existing contributors in real-time
+- **Smart Content-Aware Layout** - App height adapts to content, eliminating unnecessary scrolling
+- **Mobile Viewport Optimization** - Uses `100svh` on mobile to handle browser UI properly
+
+### Fixed
+- **Mobile Scroll Issue** - Completely eliminated scrolling when no contributors are present
+- **Contributor Reselection** - Easy to add existing people without retyping full names
+- **Mobile Browser UI** - Proper viewport handling prevents overflow on mobile devices
+
+---
+
 ## [1.2.3] - 2024-12-31
 
 ### Added

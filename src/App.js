@@ -19,6 +19,9 @@ function App() {
   const [description, setDescription] = useState('');
   const [weight, setWeight] = useState('1');
   const [errorMessage, setErrorMessage] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [filteredNames, setFilteredNames] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const [editingItem, setEditingItem] = useState(null);
   const [editDescription, setEditDescription] = useState('');
   const [editAmount, setEditAmount] = useState('');
@@ -60,6 +63,85 @@ function App() {
     }
     // If invalid format, don't update the state (prevents typing)
   };
+
+  // Handle name input changes with autocomplete
+  const handleNameChange = (e) => {
+    const value = e.target.value;
+    setName(value);
+    setSelectedIndex(-1); // Reset selection when typing
+    
+    // Filter existing contributor names
+    if (value.trim()) {
+      const existing = people.map(person => person.name);
+      const filtered = existing.filter(existingName => 
+        existingName.toLowerCase().includes(value.toLowerCase().trim()) &&
+        existingName.toLowerCase() !== value.toLowerCase().trim()
+      );
+      setFilteredNames(filtered);
+      setShowDropdown(filtered.length > 0);
+    } else {
+      setFilteredNames([]);
+      setShowDropdown(false);
+    }
+  };
+
+  const selectName = (selectedName) => {
+    setName(selectedName);
+    setShowDropdown(false);
+    setFilteredNames([]);
+  };
+
+  const closeDropdown = () => {
+    setShowDropdown(false);
+    setFilteredNames([]);
+    setSelectedIndex(-1);
+  };
+
+  const handleKeyDown = (e) => {
+    if (!showDropdown || filteredNames.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault();
+        setSelectedIndex(prev => 
+          prev < filteredNames.length - 1 ? prev + 1 : 0
+        );
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        setSelectedIndex(prev => 
+          prev > 0 ? prev - 1 : filteredNames.length - 1
+        );
+        break;
+      case 'Enter':
+        if (selectedIndex >= 0) {
+          e.preventDefault();
+          selectName(filteredNames[selectedIndex]);
+        }
+        break;
+      case 'Escape':
+        closeDropdown();
+        break;
+      default:
+        break;
+    }
+  };
+
+  const autocompleteRef = useRef(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target)) {
+        closeDropdown();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Handle edit amount input validation
   const handleEditAmountChange = (e) => {
@@ -584,7 +666,7 @@ function App() {
   };
 
   return (
-    <div className="App">
+    <div className={`App ${people.length > 0 ? 'has-content' : ''}`}>
       <div className={`container ${people.length > 0 ? 'has-summary' : ''}`}>
         <header className="header">
           <h1>💰 Splitsies</h1>
@@ -593,24 +675,47 @@ function App() {
 
         <form onSubmit={addPerson} className="input-form">
           <div className="input-group">
-            <div className="input-with-clear">
+            <div className="input-with-clear autocomplete-container" ref={autocompleteRef}>
               <input
                 type="text"
                 placeholder="Name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={handleNameChange}
+                onKeyDown={handleKeyDown}
+                onFocus={() => {
+                  if (filteredNames.length > 0) {
+                    setShowDropdown(true);
+                  }
+                }}
                 className="input-field"
                 required
               />
               {name && (
                 <button
                   type="button"
-                  onClick={clearForm}
+                  onClick={() => {
+                    clearForm();
+                    closeDropdown();
+                  }}
                   className="clear-button"
                   aria-label="Clear form"
                 >
                   ×
                 </button>
+              )}
+              {showDropdown && filteredNames.length > 0 && (
+                <div className="autocomplete-dropdown">
+                  {filteredNames.map((existingName, index) => (
+                    <div
+                      key={index}
+                      className={`autocomplete-item ${index === selectedIndex ? 'selected' : ''}`}
+                      onClick={() => selectName(existingName)}
+                      onMouseEnter={() => setSelectedIndex(index)}
+                    >
+                      {existingName}
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
             <input
@@ -987,7 +1092,7 @@ function App() {
         )}
 
         <div className="version-tag">
-          v1.2.3
+          v1.3.0
         </div>
       </div>
     </div>

@@ -12,7 +12,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  background-attachment: fixed;
   overflow-x: hidden;
 }
 
@@ -20,6 +19,10 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+}
+
+.App.has-content {
+  min-height: 100vh;
 }
 
 .container {
@@ -30,10 +33,11 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  min-height: 100vh;
 }
 
+/* Only stretch container when it has contributors */
 .container.has-summary {
+  flex: 1;
   padding-bottom: 80px;
 }
 
@@ -74,6 +78,45 @@ body {
   position: relative;
   display: flex;
   align-items: center;
+}
+
+/* Autocomplete dropdown */
+.autocomplete-container {
+  position: relative;
+}
+
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #e1e5e9;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.autocomplete-item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f3f5;
+  transition: background-color 0.2s;
+}
+
+.autocomplete-item:hover {
+  background-color: #f8f9fa;
+}
+
+.autocomplete-item.selected {
+  background-color: #e3f2fd;
+}
+
+.autocomplete-item:last-child {
+  border-bottom: none;
 }
 
 .input-with-clear .input-field {
@@ -930,6 +973,10 @@ body {
 
 /* Mobile Responsiveness */
 @media (max-width: 480px) {
+  .App.has-content {
+    min-height: 100svh; /* Use small viewport height on mobile */
+  }
+  
   .container {
     border-radius: 0;
     margin: 0;
@@ -940,7 +987,7 @@ body {
   }
   
   .version-tag {
-    padding: 6px 15px 10px 15px;
+    padding: 6px 15px 5px 15px; /* Reduced bottom padding on mobile */
   }
   
   .summary {
