@@ -22,6 +22,7 @@ function App() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [filteredNames, setFilteredNames] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
+  const [showMenu, setShowMenu] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editDescription, setEditDescription] = useState('');
   const [editAmount, setEditAmount] = useState('');
@@ -128,12 +129,16 @@ function App() {
   };
 
   const autocompleteRef = useRef(null);
+  const menuRef = useRef(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (autocompleteRef.current && !autocompleteRef.current.contains(event.target)) {
         closeDropdown();
+      }
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setShowMenu(false);
       }
     };
 
@@ -669,8 +674,43 @@ function App() {
     <div className={`App ${people.length > 0 ? 'has-content' : ''}`}>
       <div className={`container ${people.length > 0 ? 'has-summary' : ''}`}>
         <header className="header">
-          <h1>💰 Splitsies</h1>
-          <p>Split expenses fairly among friends</p>
+          <div className="header-content">
+            <div className="header-text">
+              <h1>💰 Splitsies</h1>
+              <p>Split expenses fairly among friends</p>
+            </div>
+            <div className="header-actions" ref={menuRef}>
+              <button 
+                className="menu-toggle"
+                onClick={() => setShowMenu(!showMenu)}
+                aria-label="Open menu"
+              >
+                ⋮
+              </button>
+              {showMenu && (
+                <div className="action-menu">
+                  <button 
+                    onClick={() => {
+                      exportToJPG();
+                      setShowMenu(false);
+                    }}
+                    className="menu-item"
+                  >
+                    📤 Export JPG
+                  </button>
+                  <button 
+                    onClick={() => {
+                      clearAllData();
+                      setShowMenu(false);
+                    }}
+                    className="menu-item menu-item-danger"
+                  >
+                    🗑️ New Session
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </header>
 
         <form onSubmit={addPerson} className="input-form">
@@ -1070,29 +1110,10 @@ function App() {
           </div>
         )}
 
-        {people.length > 0 && (
-          <div className="new-session-section">
-            <div className="session-actions">
-              <button 
-                onClick={exportToJPG}
-                className="export-button"
-                aria-label="Export as JPG"
-              >
-                🖼️ Export
-              </button>
-              <button 
-                onClick={clearAllData}
-                className="new-session-button"
-                aria-label="Start new session"
-              >
-                New Session
-              </button>
-            </div>
-          </div>
-        )}
+
 
         <div className="version-tag">
-          v1.3.0
+          v1.3.1
         </div>
       </div>
     </div>

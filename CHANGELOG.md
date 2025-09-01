@@ -2,6 +2,23 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.3.1] - 2024-12-31
+
+### Added
+- **Three-Dot Menu** - Moved Export and New Session actions to a professional dropdown menu in header
+- **Click Outside to Close** - Menu closes when clicking elsewhere for better UX
+
+### Changed
+- **Cleaner Interface** - Removed prominent Export and New Session buttons from bottom
+- **Intentional Actions** - Export and New Session now require deliberate menu access
+- **Header Layout** - Added professional three-dot menu button in top-right corner
+
+### Fixed
+- **Accidental Clicks** - Eliminated risk of accidentally triggering Export or New Session
+- **Visual Clutter** - Cleaner bottom section with just version tag
+
+---
+
 ## [1.3.0] - 2024-12-31
 
 ### Added
