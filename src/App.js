@@ -23,6 +23,7 @@ function App() {
   const [filteredNames, setFilteredNames] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showMenu, setShowMenu] = useState(false);
+  const [showExportNotification, setShowExportNotification] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editDescription, setEditDescription] = useState('');
   const [editAmount, setEditAmount] = useState('');
@@ -636,6 +637,19 @@ function App() {
   const exportToJPG = async () => {
     if (!exportRef.current || people.length === 0) return;
 
+    // Check if in edit mode and show notification
+    if (isEditMode || editingItem || editingPerson) {
+      setShowExportNotification(true);
+      setShowMenu(false); // Close the menu
+      
+      // Auto-hide notification after 4 seconds
+      setTimeout(() => {
+        setShowExportNotification(false);
+      }, 4000);
+      
+      return; // Don't proceed with export
+    }
+
     try {
       // Add capturing class to show export header
       exportRef.current.classList.add('capturing');
@@ -712,6 +726,22 @@ function App() {
             </div>
           </div>
         </header>
+
+        {showExportNotification && (
+          <div className="export-notification">
+            <div className="notification-content">
+              <span className="notification-icon">💾</span>
+              <span className="notification-text">Please save your changes before exporting</span>
+              <button 
+                className="notification-close"
+                onClick={() => setShowExportNotification(false)}
+                aria-label="Close notification"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
 
         <form onSubmit={addPerson} className="input-form">
           <div className="input-group">
@@ -1113,7 +1143,7 @@ function App() {
 
 
         <div className="version-tag">
-          v1.3.1
+          v1.3.2
         </div>
       </div>
     </div>

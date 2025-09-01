@@ -2,6 +2,22 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.3.2] - 2024-12-31
+
+### Added
+- **Export Save Notification** - Smart notification prompts users to save edits before exporting
+- **Professional Notification System** - Slide-down notification with auto-dismiss and manual close
+
+### Changed
+- **Enhanced Export UX** - Export blocked when in edit mode to prevent data loss
+- **Better User Guidance** - Clear instructions to save changes before exporting JPG
+
+### Fixed
+- **Data Protection** - Prevents accidental loss of unsaved edits during export
+- **Export Workflow** - Ensures only clean, saved data is exported to JPG files
+
+---
+
 ## [1.3.1] - 2024-12-31
 
 ### Added
