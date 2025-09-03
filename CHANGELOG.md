@@ -2,6 +2,27 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.4.0] - 2025-01-02
+
+### Added
+- **Contributor Transaction Details Modal** - Click any contributor box to view comprehensive transaction breakdown including contributions, payments to/from others, and balance verification
+- **Dark Mode Toggle** - Added dark mode option to three-dot menu with localStorage persistence across sessions
+- **JSON Data Editor** - Advanced JSON editor in three-dot menu for bulk editing and importing contributor data with comprehensive validation and copy-to-clipboard functionality
+- **Export Feedback System** - Clear notifications when attempting to export with no contributors or unsaved changes
+
+### Changed
+- **Static Contributors Display** - Removed hover and click expansion effects from contributor sections for cleaner, non-distracting interface
+- **Auto-Reset Shares Counter** - Shares input automatically resets to 1 after adding a contributor for better workflow
+- **Enhanced Light Mode Contrast** - Improved text readability with subtle contrast adjustments
+- **Dark Mode Export Support** - JPG exports now properly reflect the current theme (light/dark)
+- **Streamlined Transaction Modal** - Simplified contributor transaction details by removing redundant balance verification section and status messages for cleaner presentation
+
+### Fixed
+- **Dark Mode Background Coverage** - Fixed white space at bottom of page in dark mode
+- **Export Validation Logic** - Corrected balance verification calculations in transaction details modal
+
+---
+
 ## [1.3.2] - 2024-12-31
 
 ### Added

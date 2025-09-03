@@ -24,6 +24,7 @@ function App() {
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const [showMenu, setShowMenu] = useState(false);
   const [showExportNotification, setShowExportNotification] = useState(false);
+  const [showNoContributorsNotification, setShowNoContributorsNotification] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [editDescription, setEditDescription] = useState('');
   const [editAmount, setEditAmount] = useState('');
@@ -37,6 +38,26 @@ function App() {
   // Temporary edit states for master edit mode
   const [tempEditStates, setTempEditStates] = useState({});
   
+  // Modal state for contributor details
+  const [showModal, setShowModal] = useState(false);
+  const [selectedContributor, setSelectedContributor] = useState(null);
+  
+  // JSON editor modal state
+  const [showJsonEditor, setShowJsonEditor] = useState(false);
+  const [jsonData, setJsonData] = useState('');
+  const [jsonError, setJsonError] = useState('');
+  
+  // Dark mode state with localStorage persistence
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    try {
+      const savedDarkMode = localStorage.getItem('splitsies-dark-mode');
+      return savedDarkMode ? JSON.parse(savedDarkMode) : false;
+    } catch (error) {
+      console.error('Error loading dark mode setting:', error);
+      return false;
+    }
+  });
+  
   // Ref for the exportable content
   const exportRef = useRef();
 
@@ -48,6 +69,29 @@ function App() {
       console.error('Error saving data:', error);
     }
   }, [people]);
+
+  // Save dark mode setting to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('splitsies-dark-mode', JSON.stringify(isDarkMode));
+    } catch (error) {
+      console.error('Error saving dark mode setting:', error);
+    }
+  }, [isDarkMode]);
+
+  // Update body background for dark mode
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.style.background = 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)';
+    } else {
+      document.body.style.background = 'linear-gradient(135deg, #f1f3f5 0%, #dee2e6 100%)';
+    }
+    
+    // Cleanup function to reset on unmount
+    return () => {
+      document.body.style.background = '';
+    };
+  }, [isDarkMode]);
 
   // Handle amount input validation
   const handleAmountChange = (e) => {
@@ -132,7 +176,9 @@ function App() {
   const autocompleteRef = useRef(null);
   const menuRef = useRef(null);
 
-  // Close dropdown when clicking outside
+  // Close dropdown and modal when clicking outside
+  const modalRef = useRef(null);
+  
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (autocompleteRef.current && !autocompleteRef.current.contains(event.target)) {
@@ -140,6 +186,10 @@ function App() {
       }
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setShowMenu(false);
+      }
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        setShowModal(false);
+        setSelectedContributor(null);
       }
     };
 
@@ -495,6 +545,42 @@ function App() {
 
   const splits = calculateSplits();
 
+  // Calculate individual contributor details for modal
+  const getContributorDetails = (contributorName) => {
+    if (!contributorName) return null;
+
+    const contributor = people.find(person => person.name === contributorName);
+    if (!contributor) return null;
+
+    const contributorTotal = contributor.items.reduce((sum, item) => sum + item.amount, 0);
+    const contributorWeight = contributor.weight || 1;
+    const contributorOwes = costPerShare * contributorWeight;
+    const balance = contributorTotal - contributorOwes;
+
+    // Find all transactions involving this contributor
+    const paymentsToReceive = splits.filter(split => split.to === contributorName);
+    const paymentsToMake = splits.filter(split => split.from === contributorName);
+
+    const totalReceiving = paymentsToReceive.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalPaying = paymentsToMake.reduce((sum, payment) => sum + payment.amount, 0);
+
+    return {
+      name: contributorName,
+      weight: contributorWeight,
+      items: contributor.items,
+      totalContributed: contributorTotal,
+      owedAmount: contributorOwes,
+      balance: balance,
+      paymentsToReceive: paymentsToReceive,
+      paymentsToMake: paymentsToMake,
+      totalReceiving: totalReceiving,
+      totalPaying: totalPaying,
+      isCreditor: balance > 0.01,
+      isDebtor: balance < -0.01,
+      isEven: Math.abs(balance) <= 0.01
+    };
+  };
+
   const addPerson = (e) => {
     e.preventDefault();
     if (name.trim()) {
@@ -593,9 +679,10 @@ function App() {
         setPeople([...people, newPerson]);
       }
       
-      // Keep name in place, only clear amount and description
+      // Keep name in place, only clear amount, description, and reset shares
       setAmount('');
       setDescription('');
+      setWeight('1'); // Reset shares back to 1
       setErrorMessage(''); // Clear any previous error messages
     }
   };
@@ -632,10 +719,143 @@ function App() {
     }
   };
 
+  // Handle contributor name click to show modal
+  const handleContributorClick = (contributorName) => {
+    if (!isEditMode) { // Only show modal when not in edit mode
+      setSelectedContributor(contributorName);
+      setShowModal(true);
+    }
+  };
+
+  // Close modal
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedContributor(null);
+  };
+
+  // Toggle dark mode
+  const toggleDarkMode = () => {
+    setIsDarkMode(!isDarkMode);
+  };
+
+  // Convert people data to JSON format
+  const convertToJson = () => {
+    const jsonFormat = people.map(person => ({
+      name: person.name,
+      share: person.weight || 1,
+      items: person.items.map(item => ({
+        description: item.description,
+        value: item.amount
+      }))
+    }));
+    return JSON.stringify(jsonFormat, null, 2);
+  };
+
+  // Convert JSON format back to people data
+  const convertFromJson = (jsonString) => {
+    try {
+      const parsed = JSON.parse(jsonString);
+      
+      // Validate structure
+      if (!Array.isArray(parsed)) {
+        throw new Error('Data must be an array of contributors');
+      }
+      
+      const convertedPeople = parsed.map((contributor, index) => {
+        // Validate required fields
+        if (!contributor.name || typeof contributor.name !== 'string' || !contributor.name.trim()) {
+          throw new Error(`Contributor ${index + 1}: name is required and must be a non-empty string`);
+        }
+        
+        if (!contributor.share || typeof contributor.share !== 'number' || contributor.share < 1 || contributor.share > 10) {
+          throw new Error(`Contributor ${index + 1}: share must be a number between 1 and 10`);
+        }
+        
+        if (!Array.isArray(contributor.items) || contributor.items.length === 0) {
+          throw new Error(`Contributor ${index + 1}: must have at least one item`);
+        }
+        
+        // Validate items
+        const convertedItems = contributor.items.map((item, itemIndex) => {
+          if (!item.description || typeof item.description !== 'string' || !item.description.trim()) {
+            throw new Error(`Contributor ${index + 1}, Item ${itemIndex + 1}: description is required and must be a non-empty string`);
+          }
+          
+          if (typeof item.value !== 'number' || item.value < 0) {
+            throw new Error(`Contributor ${index + 1}, Item ${itemIndex + 1}: value must be a non-negative number`);
+          }
+          
+          return {
+            id: Date.now() + Math.random(), // Generate unique ID
+            description: item.description.trim(),
+            amount: item.value
+          };
+        });
+        
+        return {
+          id: Date.now() + Math.random(), // Generate unique ID
+          name: contributor.name.trim(),
+          weight: contributor.share,
+          items: convertedItems
+        };
+      });
+      
+      // Check for duplicate names
+      const names = convertedPeople.map(p => p.name.toLowerCase());
+      const duplicateNames = names.filter((name, index) => names.indexOf(name) !== index);
+      if (duplicateNames.length > 0) {
+        throw new Error(`Duplicate contributor names found: ${duplicateNames.join(', ')}`);
+      }
+      
+      return convertedPeople;
+    } catch (error) {
+      throw error;
+    }
+  };
+
+  // Open JSON editor
+  const openJsonEditor = () => {
+    setJsonData(convertToJson());
+    setJsonError('');
+    setShowJsonEditor(true);
+    setShowMenu(false);
+  };
+
+  // Close JSON editor
+  const closeJsonEditor = () => {
+    setShowJsonEditor(false);
+    setJsonData('');
+    setJsonError('');
+  };
+
+  // Save JSON data
+  const saveJsonData = () => {
+    try {
+      const newPeople = convertFromJson(jsonData);
+      setPeople(newPeople);
+      closeJsonEditor();
+    } catch (error) {
+      setJsonError(error.message);
+    }
+  };
+
   // Export function
 
   const exportToJPG = async () => {
-    if (!exportRef.current || people.length === 0) return;
+    if (!exportRef.current) return;
+    
+    // Check if there are no contributors
+    if (people.length === 0) {
+      setShowNoContributorsNotification(true);
+      setShowMenu(false); // Close the menu
+      
+      // Auto-hide notification after 4 seconds
+      setTimeout(() => {
+        setShowNoContributorsNotification(false);
+      }, 4000);
+      
+      return; // Don't proceed with export
+    }
 
     // Check if in edit mode and show notification
     if (isEditMode || editingItem || editingPerson) {
@@ -654,8 +874,11 @@ function App() {
       // Add capturing class to show export header
       exportRef.current.classList.add('capturing');
       
+      // Set appropriate background color based on dark mode
+      const backgroundColor = isDarkMode ? '#2d2d2d' : '#ffffff';
+      
       const canvas = await html2canvas(exportRef.current, {
-        backgroundColor: '#ffffff',
+        backgroundColor: backgroundColor,
         scale: 2,
         useCORS: true,
         allowTaint: true
@@ -685,7 +908,7 @@ function App() {
   };
 
   return (
-    <div className={`App ${people.length > 0 ? 'has-content' : ''}`}>
+    <div className={`App ${people.length > 0 ? 'has-content' : ''} ${isDarkMode ? 'dark-mode' : ''}`}>
       <div className={`container ${people.length > 0 ? 'has-summary' : ''}`}>
         <header className="header">
           <div className="header-content">
@@ -703,6 +926,21 @@ function App() {
               </button>
               {showMenu && (
                 <div className="action-menu">
+                  <button 
+                    onClick={() => {
+                      toggleDarkMode();
+                      setShowMenu(false);
+                    }}
+                    className="menu-item"
+                  >
+                    {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+                  </button>
+                  <button 
+                    onClick={openJsonEditor}
+                    className="menu-item"
+                  >
+                    📝 Edit JSON
+                  </button>
                   <button 
                     onClick={() => {
                       exportToJPG();
@@ -735,6 +973,22 @@ function App() {
               <button 
                 className="notification-close"
                 onClick={() => setShowExportNotification(false)}
+                aria-label="Close notification"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
+        {showNoContributorsNotification && (
+          <div className="export-notification">
+            <div className="notification-content">
+              <span className="notification-icon">👥</span>
+              <span className="notification-text">Please add at least one contributor to export</span>
+              <button 
+                className="notification-close"
+                onClick={() => setShowNoContributorsNotification(false)}
                 aria-label="Close notification"
               >
                 ×
@@ -1001,7 +1255,10 @@ function App() {
                       </div>
                     ) : (
                       // Display mode for person name (only shown when not in edit mode)
-                      <div className="person-info">
+                      <div 
+                        className="person-info clickable"
+                        onClick={() => handleContributorClick(person.name)}
+                      >
                         <span className="person-name">
                           {person.name} 
                           {person.weight && person.weight !== 1 && (
@@ -1143,8 +1400,181 @@ function App() {
 
 
         <div className="version-tag">
-          v1.3.2
+          v1.4.0
         </div>
+
+        {/* JSON Editor Modal */}
+        {showJsonEditor && (
+          <div className="modal-overlay">
+            <div className="json-editor-modal" ref={modalRef}>
+              <div className="modal-header">
+                <h3>📝 Edit JSON Data</h3>
+                <button 
+                  className="modal-close"
+                  onClick={closeJsonEditor}
+                  aria-label="Close modal"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                <div className="json-editor-content">
+                  <div className="json-schema-info">
+                    <h4>JSON Schema:</h4>
+                    <p>Each contributor should have: <code>name</code> (string), <code>share</code> (number 1-10), and <code>items</code> (array).</p>
+                    <p>Each item should have: <code>description</code> (string) and <code>value</code> (number).</p>
+                  </div>
+                  
+                  <textarea
+                    className="json-textarea"
+                    value={jsonData}
+                    onChange={(e) => setJsonData(e.target.value)}
+                    placeholder="Enter JSON data here..."
+                    rows={20}
+                  />
+                  
+                  {jsonError && (
+                    <div className="json-error">
+                      <strong>Validation Error:</strong> {jsonError}
+                    </div>
+                  )}
+                  
+                  <div className="json-actions">
+                    <button 
+                      className="json-copy-button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(jsonData);
+                        // Could add a toast notification here
+                      }}
+                    >
+                      📋 Copy to Clipboard
+                    </button>
+                    <div className="json-save-cancel">
+                      <button 
+                        className="json-cancel-button"
+                        onClick={closeJsonEditor}
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        className="json-save-button"
+                        onClick={saveJsonData}
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Contributor Details Modal */}
+        {showModal && selectedContributor && (
+          <div className="modal-overlay">
+            <div className="modal-content" ref={modalRef}>
+              <div className="modal-header">
+                <h3>{selectedContributor} - Transaction Details</h3>
+                <button 
+                  className="modal-close"
+                  onClick={closeModal}
+                  aria-label="Close modal"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="modal-body">
+                {(() => {
+                  const details = getContributorDetails(selectedContributor);
+                  if (!details) return <p>No details available</p>;
+
+                  return (
+                    <div className="contributor-details">
+                      {/* Contribution Summary */}
+                      <div className="detail-section">
+                        <h4>Contributions</h4>
+                        <div className="contribution-list">
+                          {details.items.map((item, index) => (
+                            <div key={index} className="contribution-item">
+                              <span className="contribution-description">{item.description}</span>
+                              <span className="contribution-amount">${item.amount.toFixed(2)}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="contribution-total">
+                          <strong>Total Contributed: ${details.totalContributed.toFixed(2)}</strong>
+                        </div>
+                      </div>
+
+                      {/* Payments to Make */}
+                      {details.paymentsToMake.length > 0 && (
+                        <div className="detail-section">
+                          <h4>Money to Pay</h4>
+                          <div className="payment-list">
+                            {details.paymentsToMake.map((payment, index) => (
+                              <div key={index} className="payment-item">
+                                <span className="payment-to">{payment.to}</span>
+                                <span className="payment-arrow">←</span>
+                                <span className="payment-amount">${payment.amount.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="payment-total">
+                            <strong>Total Paying: ${details.totalPaying.toFixed(2)}</strong>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Payments to Receive */}
+                      {details.paymentsToReceive.length > 0 && (
+                        <div className="detail-section">
+                          <h4>Money to Receive</h4>
+                          <div className="payment-list">
+                            {details.paymentsToReceive.map((payment, index) => (
+                              <div key={index} className="payment-item">
+                                <span className="payment-from">{payment.from}</span>
+                                <span className="payment-arrow">→</span>
+                                <span className="payment-amount">${payment.amount.toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="payment-total">
+                            <strong>Total Receiving: ${details.totalReceiving.toFixed(2)}</strong>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Share Information */}
+                      <div className="detail-section">
+                        <h4>Share Details</h4>
+                        <div className="share-info">
+                          <p>Cost per share: ${costPerShare.toFixed(2)}</p>
+                          <p>Share multiplier: ×{details.weight}</p>
+                          <hr className="share-divider" />
+                          <p>Owed amount: ${details.owedAmount.toFixed(2)}</p>
+                        </div>
+                      </div>
+
+                      {/* Balance Information */}
+                      <div className="detail-section">
+                        <h4>Balance Summary</h4>
+                        <div className="share-info">
+                          <p>Total contributed: ${details.totalContributed.toFixed(2)}</p>
+                          <p>Owed amount: -${details.owedAmount.toFixed(2)}</p>
+                          <hr className="share-divider" />
+                                                  <p>Balance: {details.balance >= 0 ? '+' : ''}${details.balance.toFixed(2)}</p>
+                        </div>
+                      </div>
+
+
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
