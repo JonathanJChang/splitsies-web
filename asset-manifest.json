@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/splitsies-web/static/css/main.feaf0710.css",
-    "main.js": "/splitsies-web/static/js/main.e7c550a5.js",
+    "main.js": "/splitsies-web/static/js/main.815b3eab.js",
     "static/js/453.05492fed.chunk.js": "/splitsies-web/static/js/453.05492fed.chunk.js",
     "index.html": "/splitsies-web/index.html",
     "main.feaf0710.css.map": "/splitsies-web/static/css/main.feaf0710.css.map",
-    "main.e7c550a5.js.map": "/splitsies-web/static/js/main.e7c550a5.js.map",
+    "main.815b3eab.js.map": "/splitsies-web/static/js/main.815b3eab.js.map",
     "453.05492fed.chunk.js.map": "/splitsies-web/static/js/453.05492fed.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.feaf0710.css",
-    "static/js/main.e7c550a5.js"
+    "static/js/main.815b3eab.js"
   ]
 }
