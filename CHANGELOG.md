@@ -16,6 +16,9 @@ All notable changes to Splitsies will be documented in this file.
 - **Removed Visual Distractions** - Eliminated enlarging hover effects from contributor delete buttons for cleaner interface
 - **Background Scroll Lock** - Prevents background scrolling when transaction details modal is open for better mobile experience
 - **Streamlined Animations** - Removed excessive global animations that caused unwanted movement throughout the app
+- **Enhanced Transaction Modal Layout** - Reordered sections with Balance Summary appearing above Share Details for better information hierarchy
+- **Improved Balance Summary** - Added detailed breakdown showing Total contributed, Total paying (+), Total receiving (-), and emphasized Total cost in bold
+- **Consistent Visual Emphasis** - Made "Total cost" bold in both Balance Summary and Share Details sections for clear visual hierarchy
 
 ### Fixed
 - **Swipe Navigation Logic** - Corrected swipe direction behavior to match carousel expectations (swipe left reveals next contributor)

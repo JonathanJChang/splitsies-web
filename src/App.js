@@ -1530,7 +1530,7 @@ function App() {
 
 
         <div className="version-tag">
-          v1.4.0
+          v1.5.0
         </div>
 
         {/* JSON Editor Modal */}
@@ -1712,6 +1712,22 @@ function App() {
                         </div>
                       )}
 
+                      {/* Balance Information */}
+                      <div className="detail-section">
+                        <h4>Balance Summary</h4>
+                        <div className="share-info">
+                          <p>Total contributed: ${details.totalContributed.toFixed(2)}</p>
+                          {details.totalPaying > 0 && (
+                            <p>Total paying: +${details.totalPaying.toFixed(2)}</p>
+                          )}
+                          {details.totalReceiving > 0 && (
+                            <p>Total receiving: -${details.totalReceiving.toFixed(2)}</p>
+                          )}
+                          <hr className="share-divider" />
+                          <p><strong>Total cost: ${details.owedAmount.toFixed(2)}</strong></p>
+                        </div>
+                      </div>
+
                       {/* Share Information */}
                       <div className="detail-section">
                         <h4>Share Details</h4>
@@ -1719,18 +1735,7 @@ function App() {
                           <p>Cost per share: ${costPerShare.toFixed(2)}</p>
                           <p>Share multiplier: ×{details.weight}</p>
                           <hr className="share-divider" />
-                          <p>Total cost: ${details.owedAmount.toFixed(2)}</p>
-                        </div>
-                      </div>
-
-                      {/* Balance Information */}
-                      <div className="detail-section">
-                        <h4>Balance Summary</h4>
-                        <div className="share-info">
-                          <p>Total contributed: ${details.totalContributed.toFixed(2)}</p>
-                          <p>Total cost: -${details.owedAmount.toFixed(2)}</p>
-                          <hr className="share-divider" />
-                                                  <p>Balance: {details.balance >= 0 ? '+' : ''}${details.balance.toFixed(2)}</p>
+                          <p><strong>Total cost: ${details.owedAmount.toFixed(2)}</strong></p>
                         </div>
                       </div>
 
