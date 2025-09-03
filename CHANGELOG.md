@@ -2,6 +2,28 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.5.0] - 2025-01-02
+
+### Added
+- **Mobile Swipe Navigation** - Added touch gesture support for transaction details modal, allowing users to swipe left/right to navigate between contributors on mobile devices
+- **Interactive Navigation Controls** - Added clickable previous/next contributor names in modal header for easy navigation on both web and mobile
+- **Enhanced Accessibility** - Added proper ARIA labels, keyboard navigation, and screen reader support for contributor interaction elements
+
+### Changed
+- **Improved Edit Mode UX** - Added "Done" and "Cancel" buttons in edit mode with full revert functionality to prevent accidental data loss
+- **Enhanced Contributor Clickability** - Added visual indicator (») and improved hover effects to make it clear that contributor names are clickable for transaction details
+- **Fixed Modal Header** - Transaction details modal header now stays fixed at top while content scrolls, improving navigation and readability
+- **Removed Visual Distractions** - Eliminated enlarging hover effects from contributor delete buttons for cleaner interface
+- **Background Scroll Lock** - Prevents background scrolling when transaction details modal is open for better mobile experience
+- **Streamlined Animations** - Removed excessive global animations that caused unwanted movement throughout the app
+
+### Fixed
+- **Swipe Navigation Logic** - Corrected swipe direction behavior to match carousel expectations (swipe left reveals next contributor)
+- **Navigation Layout** - Fixed uneven spacing in mobile navigation controls using CSS Grid for perfect alignment
+- **Modal Content Organization** - Reordered transaction details sections for better information hierarchy and clarity
+
+---
+
 ## [1.4.0] - 2025-01-02
 
 ### Added

@@ -38,9 +38,16 @@ function App() {
   // Temporary edit states for master edit mode
   const [tempEditStates, setTempEditStates] = useState({});
   
+  // Store original data when entering edit mode for potential cancellation
+  const [originalDataBeforeEdit, setOriginalDataBeforeEdit] = useState(null);
+  
   // Modal state for contributor details
   const [showModal, setShowModal] = useState(false);
   const [selectedContributor, setSelectedContributor] = useState(null);
+  
+  // Touch/swipe state for modal navigation
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
   
   // JSON editor modal state
   const [showJsonEditor, setShowJsonEditor] = useState(false);
@@ -92,6 +99,22 @@ function App() {
       document.body.style.background = '';
     };
   }, [isDarkMode]);
+
+  // Modal scroll lock effect
+  useEffect(() => {
+    if (showModal) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+
+    // Cleanup function to ensure class is removed when component unmounts
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [showModal]);
+
+
 
   // Handle amount input validation
   const handleAmountChange = (e) => {
@@ -691,32 +714,57 @@ function App() {
     setPeople(people.filter(person => person.id !== id));
   };
 
-  // Toggle master edit mode
-  const toggleEditMode = () => {
-    if (isEditMode) {
-      // Exiting edit mode - save all changes and clear temp states
-      saveAllTempEdits();
-      setTempEditStates({});
-      cancelAllEdits();
-      setIsEditMode(false);
-    } else {
-      // Entering edit mode - initialize temp edit states for all items
-      const tempStates = {};
-      people.forEach(person => {
-        tempStates[`person-${person.id}`] = {
-          name: person.name,
-          weight: person.weight || 1
+  // Enter edit mode
+  const enterEditMode = () => {
+    // Cancel any active individual edits first
+    cancelAllEdits();
+    
+    // Store original data for potential cancellation
+    setOriginalDataBeforeEdit(JSON.parse(JSON.stringify(people)));
+    
+    // Initialize temp edit states for all items
+    const tempStates = {};
+    people.forEach(person => {
+      tempStates[`person-${person.id}`] = {
+        name: person.name,
+        weight: person.weight || 1
+      };
+      person.items.forEach(item => {
+        tempStates[`item-${person.id}-${item.id}`] = {
+          description: item.description,
+          amount: item.amount.toString()
         };
-        person.items.forEach(item => {
-          tempStates[`item-${person.id}-${item.id}`] = {
-            description: item.description,
-            amount: item.amount.toString()
-          };
-        });
       });
-      setTempEditStates(tempStates);
-      setIsEditMode(true);
+    });
+    setTempEditStates(tempStates);
+    setIsEditMode(true);
+  };
+
+  // Confirm and save all changes in edit mode
+  const confirmEditMode = () => {
+    // Save all changes and clear temp states
+    saveAllTempEdits();
+    setTempEditStates({});
+    cancelAllEdits();
+    setIsEditMode(false);
+    
+    // Clear original data backup
+    setOriginalDataBeforeEdit(null);
+  };
+
+  // Cancel edit mode and revert all changes
+  const cancelEditMode = () => {
+    if (originalDataBeforeEdit) {
+      // Revert to original data
+      setPeople(originalDataBeforeEdit);
     }
+    
+    // Clear temp states and exit edit mode
+    setTempEditStates({});
+    setIsEditMode(false);
+    
+    // Clear original data backup
+    setOriginalDataBeforeEdit(null);
   };
 
   // Handle contributor name click to show modal
@@ -731,6 +779,57 @@ function App() {
   const closeModal = () => {
     setShowModal(false);
     setSelectedContributor(null);
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+
+  // Navigate to next/previous contributor in modal
+  const navigateToContributor = (direction) => {
+    if (!selectedContributor || people.length <= 1) return;
+    
+    const currentIndex = people.findIndex(person => person.name === selectedContributor);
+    if (currentIndex === -1) return;
+    
+    let newIndex;
+    if (direction === 'next') {
+      // Right swipe goes to next person (below in list)
+      newIndex = (currentIndex + 1) % people.length;
+    } else {
+      // Left swipe goes to previous person (above in list)  
+      newIndex = (currentIndex - 1 + people.length) % people.length;
+    }
+    
+    setSelectedContributor(people[newIndex].name);
+  };
+
+  // Touch event handlers for swipe detection
+  const handleTouchStart = (e) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > 50;
+    const isRightSwipe = distance < -50;
+    
+    if (isLeftSwipe) {
+      // Left swipe - move carousel left, revealing person on the right
+      navigateToContributor('next');
+    }
+    if (isRightSwipe) {
+      // Right swipe - move carousel right, revealing person on the left
+      navigateToContributor('prev');
+    }
+    
+    setTouchStart(null);
+    setTouchEnd(null);
   };
 
   // Toggle dark mode
@@ -1151,13 +1250,34 @@ function App() {
           <div className="people-list">
             <div className="contributors-header">
               <h3>Contributors</h3>
-              <button 
-                onClick={toggleEditMode}
-                className={`master-edit-button ${isEditMode ? 'active' : ''}`}
-                aria-label={isEditMode ? 'Confirm changes' : 'Edit contributors'}
-              >
-                {isEditMode ? '✓ Done' : '✎ Edit'}
-              </button>
+{isEditMode ? (
+                // Edit mode: Show Done and Cancel buttons
+                <div className="edit-mode-buttons">
+                  <button 
+                    onClick={confirmEditMode}
+                    className="master-edit-button confirm-button"
+                    aria-label="Confirm all changes"
+                  >
+                    ✓ Done
+                  </button>
+                  <button 
+                    onClick={cancelEditMode}
+                    className="master-edit-button cancel-button"
+                    aria-label="Cancel all changes and revert"
+                  >
+                    ✗ Cancel
+                  </button>
+                </div>
+              ) : (
+                // Normal mode: Show Edit button
+                <button 
+                  onClick={enterEditMode}
+                  className="master-edit-button"
+                  aria-label="Edit contributors"
+                >
+                  ✎ Edit
+                </button>
+              )}
             </div>
             {people.map(person => {
               const personTotal = person.items.reduce((sum, item) => sum + item.amount, 0);
@@ -1258,6 +1378,16 @@ function App() {
                       <div 
                         className="person-info clickable"
                         onClick={() => handleContributorClick(person.name)}
+                        title={`Click to view detailed transaction breakdown for ${person.name}`}
+                        aria-label={`View transaction details for ${person.name}`}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleContributorClick(person.name);
+                          }
+                        }}
                       >
                         <span className="person-name">
                           {person.name} 
@@ -1473,9 +1603,17 @@ function App() {
         {/* Contributor Details Modal */}
         {showModal && selectedContributor && (
           <div className="modal-overlay">
-            <div className="modal-content" ref={modalRef}>
+            <div 
+              className="modal-content" 
+              ref={modalRef}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
               <div className="modal-header">
-                <h3>{selectedContributor} - Transaction Details</h3>
+                <div className="modal-title-section">
+                  <h3>{selectedContributor} - Transaction Details</h3>
+                </div>
                 <button 
                   className="modal-close"
                   onClick={closeModal}
@@ -1484,6 +1622,35 @@ function App() {
                   ×
                 </button>
               </div>
+              {people.length > 1 && (() => {
+                const currentIndex = people.findIndex(p => p.name === selectedContributor);
+                const prevIndex = (currentIndex - 1 + people.length) % people.length;
+                const nextIndex = (currentIndex + 1) % people.length;
+                const prevName = people[prevIndex]?.name;
+                const nextName = people[nextIndex]?.name;
+                
+                return (
+                  <div className="swipe-indicator">
+                    <span 
+                      className="swipe-prev clickable-nav"
+                      onClick={() => navigateToContributor('prev')}
+                      title={`Go to ${prevName}`}
+                    >
+                      ← {prevName}
+                    </span>
+                    <div className="contributor-counter">
+                      {currentIndex + 1} of {people.length}
+                    </div>
+                    <span 
+                      className="swipe-next clickable-nav"
+                      onClick={() => navigateToContributor('next')}
+                      title={`Go to ${nextName}`}
+                    >
+                      {nextName} →
+                    </span>
+                  </div>
+                );
+              })()}
               <div className="modal-body">
                 {(() => {
                   const details = getContributorDetails(selectedContributor);
@@ -1552,7 +1719,7 @@ function App() {
                           <p>Cost per share: ${costPerShare.toFixed(2)}</p>
                           <p>Share multiplier: ×{details.weight}</p>
                           <hr className="share-divider" />
-                          <p>Owed amount: ${details.owedAmount.toFixed(2)}</p>
+                          <p>Total cost: ${details.owedAmount.toFixed(2)}</p>
                         </div>
                       </div>
 
@@ -1561,7 +1728,7 @@ function App() {
                         <h4>Balance Summary</h4>
                         <div className="share-info">
                           <p>Total contributed: ${details.totalContributed.toFixed(2)}</p>
-                          <p>Owed amount: -${details.owedAmount.toFixed(2)}</p>
+                          <p>Total cost: -${details.owedAmount.toFixed(2)}</p>
                           <hr className="share-divider" />
                                                   <p>Balance: {details.balance >= 0 ? '+' : ''}${details.balance.toFixed(2)}</p>
                         </div>
