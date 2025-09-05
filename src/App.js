@@ -1013,7 +1013,6 @@ function App() {
           <div className="header-content">
             <div className="header-text">
               <h1>💰 Splitsies</h1>
-              <p>Split expenses fairly among friends</p>
             </div>
             <div className="header-actions" ref={menuRef}>
               <button 
@@ -1282,7 +1281,21 @@ function App() {
             {people.map(person => {
               const personTotal = person.items.reduce((sum, item) => sum + item.amount, 0);
               return (
-                <div key={person.id} className="person-section">
+                <div 
+                  key={person.id} 
+                  className={`person-section ${!isEditMode ? 'clickable' : ''}`}
+                  onClick={!isEditMode ? () => handleContributorClick(person.name) : undefined}
+                  title={!isEditMode ? `Click to view detailed transaction breakdown for ${person.name}` : undefined}
+                  aria-label={!isEditMode ? `View transaction details for ${person.name}` : undefined}
+                  role={!isEditMode ? "button" : undefined}
+                  tabIndex={!isEditMode ? 0 : undefined}
+                  onKeyDown={!isEditMode ? (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleContributorClick(person.name);
+                    }
+                  } : undefined}
+                >
                   <div className="person-header">
                     {(editingPerson === person.id || isEditMode) ? (
                       // Edit mode for person name
@@ -1375,20 +1388,7 @@ function App() {
                       </div>
                     ) : (
                       // Display mode for person name (only shown when not in edit mode)
-                      <div 
-                        className="person-info clickable"
-                        onClick={() => handleContributorClick(person.name)}
-                        title={`Click to view detailed transaction breakdown for ${person.name}`}
-                        aria-label={`View transaction details for ${person.name}`}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleContributorClick(person.name);
-                          }
-                        }}
-                      >
+                      <div className="person-info">
                         <span className="person-name">
                           {person.name} 
                           {person.weight && person.weight !== 1 && (
@@ -1500,19 +1500,21 @@ function App() {
             <div className="splits-list">
               {splits.map((split, index) => (
                 <div key={index} className="split-item">
-                  <span className="split-from">
-                    {split.from}
-                    {split.fromWeight > 1 && (
-                      <span className="split-weight"> (×{split.fromWeight})</span>
-                    )}
-                  </span>
-                  <span className="split-arrow">→</span>
-                  <span className="split-to">
-                    {split.to}
-                    {split.toWeight > 1 && (
-                      <span className="split-weight"> (×{split.toWeight})</span>
-                    )}
-                  </span>
+                  <div className="split-info">
+                    <span className="split-from">
+                      {split.from}
+                      {split.fromWeight > 1 && (
+                        <span className="split-weight"> (×{split.fromWeight})</span>
+                      )}
+                    </span>
+                    <span className="split-arrow"> → </span>
+                    <span className="split-to">
+                      {split.to}
+                      {split.toWeight > 1 && (
+                        <span className="split-weight"> (×{split.toWeight})</span>
+                      )}
+                    </span>
+                  </div>
                   <span className="split-amount">${split.amount.toFixed(2)}</span>
                 </div>
               ))}
@@ -1530,7 +1532,7 @@ function App() {
 
 
         <div className="version-tag">
-          v1.5.1
+          v1.5.2
         </div>
 
         {/* JSON Editor Modal */}
@@ -1631,23 +1633,23 @@ function App() {
                 
                 return (
                   <div className="swipe-indicator">
-                    <span 
+                    <div 
                       className="swipe-prev clickable-nav"
                       onClick={() => navigateToContributor('prev')}
                       title={`Go to ${prevName}`}
                     >
                       ← {prevName}
-                    </span>
+                    </div>
                     <div className="contributor-counter">
                       {currentIndex + 1} of {people.length}
                     </div>
-                    <span 
+                    <div 
                       className="swipe-next clickable-nav"
                       onClick={() => navigateToContributor('next')}
                       title={`Go to ${nextName}`}
                     >
                       {nextName} →
-                    </span>
+                    </div>
                   </div>
                 );
               })()}

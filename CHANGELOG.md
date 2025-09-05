@@ -2,6 +2,30 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.5.2] - 2025-01-02
+
+### Added
+- **Fixed Header** - Header now stays fixed at the top of the screen while scrolling, providing consistent access to app controls
+- **Enhanced Clickable Areas** - Entire contributor sections are now clickable (not just names), making it much easier to access transaction details
+
+### Changed
+- **Improved Visual Hierarchy** - Increased font size of section headers ("Contributors" and "Who Pays Whom") for better readability
+- **Better Column Alignment** - Implemented grid-based layout for "Who Pays Whom" section with properly aligned arrows and names in columns
+- **Consistent Button Sizing** - Standardized all delete button icons to the same size and consolidated duplicate CSS rules
+- **Optimized Spacing** - Increased spacing between contributor sections while compacting content within each section for better visual balance
+- **Unified Input Heights** - Made contributor name input and shares editor the same height (38px) across all devices for consistency
+- **Enhanced Edit Mode** - Added proper gap spacing between shares input and delete button to match item edit spacing
+- **Color Consistency** - Made item costs match item description colors for unified appearance
+- **Perfect Alignment** - Fixed contributor totals and individual item costs to align perfectly on the right edge
+- **Clean Design** - Removed ellipsis indicator in favor of cleaner hover effects for clickable contributor sections
+
+### Fixed
+- **Alignment Issues** - Resolved misalignment between contributor totals and individual item costs by removing unnecessary padding
+- **Mobile Input Consistency** - Fixed contributor name input appearing slimmer than shares editor on mobile devices
+- **Delete Button Positioning** - Ensured all delete buttons align perfectly in edit mode regardless of content type
+
+---
+
 ## [1.5.1] - 2025-01-02
 
 ### Changed
