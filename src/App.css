@@ -1925,8 +1925,11 @@ body {
 
 /* Dark Mode Styles */
 .App.dark-mode {
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  background: #1a1a1a;
   color: #e9ecef;
+}
+
+.App.dark-mode.has-content {
   min-height: 100vh;
 }
 
@@ -1936,7 +1939,7 @@ body {
 
 /* Dark mode header */
 .App.dark-mode .header {
-  background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+  background: #1a1a1a;
   color: #e9ecef;
 }
 
@@ -2044,7 +2047,7 @@ body {
 
 /* Dark mode add button */
 .App.dark-mode .add-button {
-  background: linear-gradient(135deg, #adb5bd 0%, #6c757d 100%);
+  background: #6c757d;
   color: #000;
 }
 

@@ -1530,7 +1530,7 @@ function App() {
 
 
         <div className="version-tag">
-          v1.5.0
+          v1.5.1
         </div>
 
         {/* JSON Editor Modal */}

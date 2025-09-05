@@ -2,6 +2,17 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.5.1] - 2025-01-02
+
+### Changed
+- **Dark Mode Visual Improvements** - Removed gradients from dark mode for cleaner, flat design aesthetic with solid colors throughout
+
+### Fixed
+- **Dark Mode Scrolling Consistency** - Fixed unnecessary scrolling in dark mode when no contributors are present, now matches light mode behavior
+- **Background Color Uniformity** - Ensured consistent solid dark background across all dark mode elements
+
+---
+
 ## [1.5.0] - 2025-01-02
 
 ### Added
