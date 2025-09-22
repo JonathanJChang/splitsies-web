@@ -2,6 +2,26 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.6.0] - 2025-09-22
+
+### Added
+- **Fixed Amount Mode** - New option to set fixed payment amounts instead of using shares
+- **Smart Validation** - Ensures at least one person uses shares and fixed amounts don't exceed total
+- **Fixed Amount Indicators** - Shows ($) in yellow for contributors using fixed amounts
+- **Enhanced Summary Stats** - Shows fixed amount totals and remaining amount to split when relevant
+- **Improved JSON Format** - Added `use_share`, `by_amount`, and `by_share` fields for better data structure
+
+### Changed
+- **Input Sizing** - Made amount input in top form match size of other inputs
+- **Default Text** - Changed "miscellaneous" to "no contributions" for $0 items
+- **Summary Display** - Cleaner stats display showing total, fixed amounts, and per-share breakdowns
+- **JSON Schema** - Restructured contributor data format for better clarity and flexibility
+
+### Fixed
+- **Input Consistency** - Fixed amount input size in top form to match other inputs
+- **Validation Logic** - Added checks to ensure valid distribution between fixed and share-based splits
+- **JSON Import/Export** - Enhanced validation and error messages for the new data structure
+
 ## [1.5.2] - 2025-01-02
 
 ### Added

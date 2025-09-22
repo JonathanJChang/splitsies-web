@@ -31,6 +31,7 @@ function App() {
   const [editingPerson, setEditingPerson] = useState(null);
   const [editPersonName, setEditPersonName] = useState('');
   const [editPersonWeight, setEditPersonWeight] = useState('1');
+  const [editPersonFixed, setEditPersonFixed] = useState(false);
   
   // Master edit mode state
   const [isEditMode, setIsEditMode] = useState(false);
@@ -283,7 +284,7 @@ function App() {
       return;
     }
 
-    const finalDescription = trimmedDescription || 'miscellaneous';
+    const finalDescription = trimmedDescription || (parsedAmount === 0 ? 'no contributions' : 'miscellaneous');
 
     const updatedPeople = people.map(person => {
       if (person.id === editingItem.personId) {
@@ -326,6 +327,7 @@ function App() {
     setEditingPerson(null);
     setEditPersonName('');
     setEditPersonWeight('1');
+    setEditPersonFixed(false);
   };
 
   // Cancel all active edits (helper function)
@@ -366,6 +368,8 @@ function App() {
 
   // Save all temporary edits to the main state
   const saveAllTempEdits = () => {
+    let isValid = true;
+
     // First validate that all names are not blank
     for (const person of people) {
       const personKey = `person-${person.id}`;
@@ -375,9 +379,12 @@ function App() {
       if (!nameToCheck || !nameToCheck.trim()) {
         setErrorMessage('Person names cannot be blank. Please enter a name for all contributors.');
         setTimeout(() => setErrorMessage(''), 3000);
-        return; // Don't save if validation fails
+        isValid = false;
+        break;
       }
     }
+
+    if (!isValid) return;
 
     // Check for duplicate names
     const names = people.map(person => {
@@ -390,8 +397,10 @@ function App() {
     if (duplicateNames.length > 0) {
       setErrorMessage('Duplicate names are not allowed. Please ensure all contributors have unique names.');
       setTimeout(() => setErrorMessage(''), 3000);
-      return; // Don't save if validation fails
+      isValid = false;
     }
+
+    if (!isValid) return;
 
     // Check for duplicate item descriptions within each contributor
     for (const person of people) {
@@ -409,9 +418,44 @@ function App() {
         const personName = personTemp?.name ?? person.name;
         setErrorMessage(`Duplicate item descriptions found for ${personName}. Please ensure all items have unique descriptions.`);
         setTimeout(() => setErrorMessage(''), 3000);
-        return; // Don't save if validation fails
+        isValid = false;
+        break;
       }
     }
+
+    if (!isValid) return;
+
+    // Calculate total and validate fixed amounts
+    const total = people.reduce((sum, person) => 
+      sum + person.items.reduce((itemSum, item) => itemSum + item.amount, 0), 0
+    );
+
+    let totalFixedAmount = 0;
+    let hasSharePerson = false;
+
+    for (const person of people) {
+      const personTemp = tempEditStates[`person-${person.id}`];
+      if (personTemp?.isFixed) {
+        totalFixedAmount += parseFloat(personTemp.fixedAmount || 0);
+        if (totalFixedAmount > total) {
+          setErrorMessage('Total fixed amounts cannot exceed the total sum.');
+          setTimeout(() => setErrorMessage(''), 3000);
+          isValid = false;
+          break;
+        }
+      } else {
+        hasSharePerson = true;
+      }
+    }
+
+    // Check if everyone is using fixed amounts
+    if (!hasSharePerson) {
+      setErrorMessage('At least one person must use shares.');
+      setTimeout(() => setErrorMessage(''), 3000);
+      isValid = false;
+    }
+
+    if (!isValid) return;
 
     const updatedPeople = people.map(person => {
       const personKey = `person-${person.id}`;
@@ -424,7 +468,7 @@ function App() {
         if (itemTemp) {
           return {
             ...item,
-            description: itemTemp.description.trim() || 'miscellaneous',
+            description: itemTemp.description.trim() || (parseFloat(itemTemp.amount) === 0 ? 'no contributions' : 'miscellaneous'),
             amount: parseFloat(itemTemp.amount) || 0
           };
         }
@@ -432,17 +476,46 @@ function App() {
       });
 
       if (personTemp) {
-        return {
-          ...person,
-          name: personTemp.name.trim(),
-          weight: parseInt(personTemp.weight) || 1,
-          items: updatedItems
-        };
+          return {
+            ...person,
+            name: personTemp.name.trim(),
+            weight: parseInt(personTemp.weight) || 1,
+            isFixed: personTemp.isFixed || false,
+            fixedAmount: personTemp.fixedAmount || '0',
+            items: updatedItems
+          };
       }
       return { ...person, items: updatedItems };
     });
 
     setPeople(updatedPeople);
+    setIsEditMode(false);
+    setTempEditStates({});
+    cancelAllEdits();
+    setOriginalDataBeforeEdit(null);
+  };
+
+  // Helper function to validate fixed amounts
+  const validateFixedAmounts = (currentPersonId = null) => {
+    const total = people.reduce((sum, person) => 
+      sum + person.items.reduce((itemSum, item) => itemSum + item.amount, 0), 0
+    );
+
+    // Calculate sum of all fixed amounts (excluding current person if editing)
+    const fixedTotal = people.reduce((sum, person) => {
+      if (person.id === currentPersonId) return sum;
+      if (isEditMode) {
+        const personTemp = tempEditStates[`person-${person.id}`];
+        if (personTemp?.isFixed) {
+          return sum + parseFloat(personTemp.fixedAmount || 0);
+        }
+      } else if (person.isFixed) {
+        return sum + parseFloat(person.fixedAmount || 0);
+      }
+      return sum;
+    }, 0);
+
+    return { total, fixedTotal };
   };
 
   // Save edited person name and weight
@@ -470,15 +543,44 @@ function App() {
       return;
     }
 
-    const updatedPeople = people.map(person => {
-      if (person.id === editingPerson) {
-        return { ...person, name: trimmedName, weight: parsedWeight };
+    // Validate fixed amount if using fixed mode
+    let isValidFixedAmount = true;
+    if (editPersonFixed) {
+      const { total, fixedTotal } = validateFixedAmounts(editingPerson);
+      const newFixedAmount = parseFloat(tempEditStates[`person-${editingPerson}`]?.by_amount || 0);
+      if (fixedTotal + newFixedAmount > total) {
+        setErrorMessage('Total fixed amounts cannot exceed the total sum.');
+        setTimeout(() => setErrorMessage(''), 3000);
+        isValidFixedAmount = false;
       }
-      return person;
-    });
 
-    setPeople(updatedPeople);
-    cancelEditPerson();
+      // Check if this would make everyone use fixed amounts
+      const hasSharePerson = people.some(p => p.id !== editingPerson && !p.isFixed);
+      if (!hasSharePerson) {
+        setErrorMessage('At least one person must use shares.');
+        setTimeout(() => setErrorMessage(''), 3000);
+        isValidFixedAmount = false;
+      }
+    }
+
+    // Only save and exit edit mode if validation passes
+    if (isValidFixedAmount) {
+      const updatedPeople = people.map(person => {
+        if (person.id === editingPerson) {
+          return { 
+            ...person, 
+            name: trimmedName, 
+            weight: parsedWeight,
+            isFixed: editPersonFixed,
+            fixedAmount: editPersonFixed ? tempEditStates[`person-${editingPerson}`]?.by_amount || '0' : person.fixedAmount // Save fixedAmount if fixed mode is active
+          };
+        }
+        return person;
+      });
+
+      setPeople(updatedPeople);
+      cancelEditPerson();
+    }
   };
 
   // Clear all data
@@ -500,24 +602,55 @@ function App() {
     return sum + person.items.reduce((itemSum, item) => itemSum + item.amount, 0);
   }, 0);
   
-  const totalShares = people.reduce((sum, person) => {
+  // Calculate totals for display
+  const sharePeople = people.filter(person => !person.isFixed);
+  const fixedPeople = people.filter(person => person.isFixed);
+  const fixedTotal = fixedPeople.reduce((sum, person) => sum + parseFloat(person.fixedAmount || 0), 0);
+  const remainingTotal = Math.max(0, total - fixedTotal);
+  
+  const totalShares = sharePeople.reduce((sum, person) => {
     return sum + (person.weight || 1);
   }, 0);
   
-  const costPerShare = totalShares > 0 ? total / totalShares : 0;
+  const costPerShare = totalShares > 0 ? remainingTotal / totalShares : 0;
 
-  // Calculate who owes whom (weighted)
+  // Calculate who owes whom (weighted and fixed)
   const calculateSplits = () => {
     if (people.length === 0) return [];
     
-    // Calculate how much each person owes or is owed based on their weight
+    const total = people.reduce((sum, person) => 
+      sum + person.items.reduce((itemSum, item) => itemSum + item.amount, 0), 0
+    );
+
+    // First handle fixed amount people
+    const fixedPeople = people.filter(person => person.isFixed);
+    const fixedTotal = fixedPeople.reduce((sum, person) => sum + parseFloat(person.fixedAmount || 0), 0);
+    
+    // Calculate remaining amount for share-based people
+    const remainingTotal = Math.max(0, total - fixedTotal);
+    const sharePeople = people.filter(person => !person.isFixed);
+    const totalShares = sharePeople.reduce((sum, person) => sum + (person.weight || 1), 0);
+    const costPerShare = totalShares > 0 ? remainingTotal / totalShares : 0;
+
+    // Calculate balances for all people
     const balances = people.map(person => {
       const personTotal = person.items.reduce((sum, item) => sum + item.amount, 0);
-      const personWeight = person.weight || 1;
-      const personOwes = costPerShare * personWeight;
+      let personOwes;
+      
+      if (person.isFixed) {
+        // Fixed amount people pay exactly what they specified
+        personOwes = parseFloat(person.fixedAmount || 0);
+      } else {
+        // Share-based people split the remaining total
+        const personWeight = person.weight || 1;
+        personOwes = costPerShare * personWeight;
+      }
+
       return {
         name: person.name,
-        weight: personWeight,
+        weight: person.weight || 1,
+        isFixed: person.isFixed,
+        fixedAmount: person.fixedAmount,
         balance: personTotal - personOwes
       };
     });
@@ -526,12 +659,16 @@ function App() {
     const debtors = balances.filter(person => person.balance < 0).map(person => ({
       name: person.name,
       weight: person.weight,
+      isFixed: person.isFixed,
+      fixedAmount: person.fixedAmount,
       owes: Math.abs(person.balance)
     }));
     
     const creditors = balances.filter(person => person.balance > 0).map(person => ({
       name: person.name,
       weight: person.weight,
+      isFixed: person.isFixed,
+      fixedAmount: person.fixedAmount,
       owed: person.balance
     }));
 
@@ -550,8 +687,12 @@ function App() {
         transfers.push({
           from: debtor.name,
           fromWeight: debtor.weight,
+          fromFixed: debtor.isFixed,
+          fromFixedAmount: debtor.fixedAmount,
           to: creditor.name,
           toWeight: creditor.weight,
+          toFixed: creditor.isFixed,
+          toFixedAmount: creditor.fixedAmount,
           amount: transferAmount
         });
       }
@@ -632,7 +773,7 @@ function App() {
         return;
       }
       
-      const itemDescription = trimmedDescription || 'miscellaneous';
+      const itemDescription = trimmedDescription || (contributionAmount === 0 ? 'no contributions' : 'miscellaneous');
       
       // Check if person already exists (case-insensitive)
       const existingPersonIndex = people.findIndex(
@@ -727,7 +868,9 @@ function App() {
     people.forEach(person => {
       tempStates[`person-${person.id}`] = {
         name: person.name,
-        weight: person.weight || 1
+        weight: person.weight || 1,
+        isFixed: person.isFixed || false,
+        fixedAmount: person.fixedAmount || '0'
       };
       person.items.forEach(item => {
         tempStates[`item-${person.id}-${item.id}`] = {
@@ -742,14 +885,9 @@ function App() {
 
   // Confirm and save all changes in edit mode
   const confirmEditMode = () => {
-    // Save all changes and clear temp states
+    // Save all changes and clear temp states only if validation passes
+    // saveAllTempEdits will show error message but not exit edit mode if validation fails
     saveAllTempEdits();
-    setTempEditStates({});
-    cancelAllEdits();
-    setIsEditMode(false);
-    
-    // Clear original data backup
-    setOriginalDataBeforeEdit(null);
   };
 
   // Cancel edit mode and revert all changes
@@ -841,7 +979,9 @@ function App() {
   const convertToJson = () => {
     const jsonFormat = people.map(person => ({
       name: person.name,
-      share: person.weight || 1,
+      use_share: !person.isFixed,
+      by_amount: person.isFixed ? person.fixedAmount : "0",
+      by_share: person.isFixed ? 1 : (person.weight || 1),
       items: person.items.map(item => ({
         description: item.description,
         value: item.amount
@@ -866,8 +1006,19 @@ function App() {
           throw new Error(`Contributor ${index + 1}: name is required and must be a non-empty string`);
         }
         
-        if (!contributor.share || typeof contributor.share !== 'number' || contributor.share < 1 || contributor.share > 10) {
-          throw new Error(`Contributor ${index + 1}: share must be a number between 1 and 10`);
+        // Validate use_share
+        if (typeof contributor.use_share !== 'boolean') {
+          throw new Error(`Contributor ${index + 1}: use_share must be a boolean (true/false)`);
+        }
+
+        // Validate by_amount
+        if (typeof contributor.by_amount !== 'string' || !/^\d+(\.\d{0,2})?$/.test(contributor.by_amount)) {
+          throw new Error(`Contributor ${index + 1}: by_amount must be a valid currency amount (e.g. "0" or "12.50")`);
+        }
+
+        // Validate by_share
+        if (!contributor.by_share || typeof contributor.by_share !== 'number' || contributor.by_share < 1 || contributor.by_share > 10) {
+          throw new Error(`Contributor ${index + 1}: by_share must be a number between 1 and 10`);
         }
         
         if (!Array.isArray(contributor.items) || contributor.items.length === 0) {
@@ -894,7 +1045,9 @@ function App() {
         return {
           id: Date.now() + Math.random(), // Generate unique ID
           name: contributor.name.trim(),
-          weight: contributor.share,
+          isFixed: !contributor.use_share,
+          fixedAmount: contributor.by_amount,
+          weight: contributor.by_share,
           items: convertedItems
         };
       });
@@ -1199,20 +1352,28 @@ function App() {
 
         {people.length > 0 && (
           <div className="summary">
-            <div className="summary-stats">
-              <div className="stat">
-                <span className="stat-label">Total</span>
-                <span className="stat-value">${total.toFixed(2)}</span>
+              <div className="summary-stats">
+                <div className="stat">
+                  <span className="stat-label">Total</span>
+                  <span className="stat-value">${total.toFixed(2)}</span>
+                </div>
+                {fixedPeople.length > 0 && (
+                  <>
+                    <div className="stat">
+                      <span className="stat-label">Fixed amounts ({fixedPeople.length})</span>
+                      <span className="stat-value">${fixedTotal.toFixed(2)}</span>
+                    </div>
+                    <div className="stat">
+                      <span className="stat-label">Remaining to split</span>
+                      <span className="stat-value">${remainingTotal.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
+                <div className="stat">
+                  <span className="stat-label">Per Share ({totalShares})</span>
+                  <span className="stat-value">${costPerShare.toFixed(2)}</span>
+                </div>
               </div>
-              <div className="stat">
-                <span className="stat-label">Per Share</span>
-                <span className="stat-value">${costPerShare.toFixed(2)}</span>
-              </div>
-              <div className="stat">
-                <span className="stat-label">Total Shares</span>
-                <span className="stat-value">{totalShares}</span>
-              </div>
-            </div>
 
           </div>
         )}
@@ -1235,11 +1396,18 @@ function App() {
                 <div className="export-stat">
                   <strong>Total: ${total.toFixed(2)}</strong>
                 </div>
+                {fixedPeople.length > 0 && (
+                  <>
+                    <div className="export-stat">
+                      <strong>Fixed amounts ({fixedPeople.length}): ${fixedTotal.toFixed(2)}</strong>
+                    </div>
+                    <div className="export-stat">
+                      <strong>Remaining to split: ${remainingTotal.toFixed(2)}</strong>
+                    </div>
+                  </>
+                )}
                 <div className="export-stat">
-                  <strong>Per Share: ${costPerShare.toFixed(2)}</strong>
-                </div>
-                <div className="export-stat">
-                  <strong>Total Shares: {totalShares}</strong>
+                  <strong>Per Share ({totalShares}): ${costPerShare.toFixed(2)}</strong>
                 </div>
               </div>
             </div>
@@ -1317,47 +1485,116 @@ function App() {
                           }`}
                           placeholder="Person name"
                         />
-                        <div className="edit-weight-controls">
-                          <button
-                            type="button"
-                            className="weight-button weight-decrease"
-                            onClick={() => {
-                              if (isEditMode) {
-                                const currentWeight = tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1;
-                                updateTempEditState(`person-${person.id}`, { weight: Math.max(1, currentWeight - 1) });
-                              } else {
-                                setEditPersonWeight(Math.max(1, parseInt(editPersonWeight) - 1 || 1));
+                          <div className="fixed-toggle">
+                            <button
+                              type="button"
+                              className={`split-mode-button ${
+                                (isEditMode ? (tempEditStates[`person-${person.id}`]?.isFixed ?? false) : editPersonFixed)
+                                  ? 'by-amount'
+                                  : 'by-shares'
+                              }`}
+                              onClick={(e) => {
+                                if (isEditMode) {
+                                  const currentFixed = tempEditStates[`person-${person.id}`]?.isFixed ?? false;
+                                  updateTempEditState(`person-${person.id}`, { isFixed: !currentFixed });
+                                } else {
+                                  setEditPersonFixed(!editPersonFixed);
+                                }
+                              }}
+                            >
+                              {(isEditMode ? (tempEditStates[`person-${person.id}`]?.isFixed ?? false) : editPersonFixed)
+                                ? 'By Amount'
+                                : 'By Shares'
                               }
-                            }}
-                            disabled={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1) <= 1 : parseInt(editPersonWeight) <= 1}
-                          >
-                            −
-                          </button>
-                          <input
-                            type="number"
-                            min="1"
-                            max="10"
-                                                          value={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1) : editPersonWeight}
-                            onChange={handleEditWeightChange}
-                            className="edit-weight-input"
-                            readOnly
-                          />
-                          <button
-                            type="button"
-                            className="weight-button weight-increase"
-                            onClick={() => {
-                              if (isEditMode) {
-                                const currentWeight = tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1;
-                                updateTempEditState(`person-${person.id}`, { weight: Math.min(10, currentWeight + 1) });
-                              } else {
-                                setEditPersonWeight(Math.min(10, parseInt(editPersonWeight) + 1 || 1));
-                              }
-                            }}
-                            disabled={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1) >= 10 : parseInt(editPersonWeight) >= 10}
-                          >
-                            +
-                          </button>
+                            </button>
                         </div>
+                        {(isEditMode ? (tempEditStates[`person-${person.id}`]?.isFixed ?? false) : editPersonFixed) ? (
+                          <div className="amount-input-group">
+                            <input
+                              type="text"
+                              inputMode="decimal"
+                              placeholder="0.00"
+                              value={isEditMode ? (tempEditStates[`person-${person.id}`]?.by_amount ?? '0') : '0'}
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                                  if (isEditMode) {
+                                    updateTempEditState(`person-${person.id}`, { by_amount: value });
+                                  } else {
+                                    setEditPersonFixed(value);
+                                  }
+                                }
+                              }}
+                              className="fixed-amount-input"
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            {(isEditMode ? (tempEditStates[`person-${person.id}`]?.isFixed ?? false) : editPersonFixed) ? (
+                              <div className="amount-input-group">
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder="0.00"
+                                  value={isEditMode ? (tempEditStates[`person-${person.id}`]?.by_amount ?? '0') : '0'}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    if (value === '' || /^\d*\.?\d{0,2}$/.test(value)) {
+                                      if (isEditMode) {
+                                        updateTempEditState(`person-${person.id}`, { by_amount: value });
+                                      } else {
+                                        setEditPersonFixed(value);
+                                      }
+                                    }
+                                  }}
+                                  className="fixed-amount-input"
+                                />
+                              </div>
+                            ) : (
+                              <div className="edit-weight-controls">
+                                <button
+                                  type="button"
+                                  className="weight-button weight-decrease"
+                                  onClick={() => {
+                                    if (isEditMode) {
+                                      const currentWeight = tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1;
+                                      updateTempEditState(`person-${person.id}`, { weight: Math.max(1, currentWeight - 1) });
+                                    } else {
+                                      setEditPersonWeight(Math.max(1, parseInt(editPersonWeight) - 1 || 1));
+                                    }
+                                  }}
+                                  disabled={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1) <= 1 : parseInt(editPersonWeight) <= 1}
+                                >
+                                  −
+                                </button>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  max="10"
+                                  value={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1) : editPersonWeight}
+                                  onChange={handleEditWeightChange}
+                                  className="edit-weight-input"
+                                  readOnly
+                                />
+                                <button
+                                  type="button"
+                                  className="weight-button weight-increase"
+                                  onClick={() => {
+                                    if (isEditMode) {
+                                      const currentWeight = tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1;
+                                      updateTempEditState(`person-${person.id}`, { weight: Math.min(10, currentWeight + 1) });
+                                    } else {
+                                      setEditPersonWeight(Math.min(10, parseInt(editPersonWeight) + 1 || 1));
+                                    }
+                                  }}
+                                  disabled={isEditMode ? (tempEditStates[`person-${person.id}`]?.weight ?? person.weight ?? 1) >= 10 : parseInt(editPersonWeight) >= 10}
+                                >
+                                  +
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         {!isEditMode && (
                           <>
                             <button 
@@ -1391,8 +1628,10 @@ function App() {
                       <div className="person-info">
                         <span className="person-name">
                           {person.name} 
-                          {person.weight && person.weight !== 1 && (
-                            <span className="person-weight"> (×{person.weight})</span>
+                          {person.isFixed ? (
+                            <span className="person-fixed-amount"> ($)</span>
+                          ) : (
+                            <span className="person-weight"> (×{person.weight || 1})</span>
                           )}
                         </span>
                         <span className="person-amount">${personTotal.toFixed(2)}</span>
@@ -1503,15 +1742,19 @@ function App() {
                   <div className="split-info">
                     <span className="split-from">
                       {split.from}
-                      {split.fromWeight > 1 && (
-                        <span className="split-weight"> (×{split.fromWeight})</span>
+                      {split.fromFixed ? (
+                        <span className="person-fixed-amount"> ($)</span>
+                      ) : (
+                        <span className="person-weight"> (×{split.fromWeight || 1})</span>
                       )}
                     </span>
                     <span className="split-arrow"> → </span>
                     <span className="split-to">
                       {split.to}
-                      {split.toWeight > 1 && (
-                        <span className="split-weight"> (×{split.toWeight})</span>
+                      {split.toFixed ? (
+                        <span className="person-fixed-amount"> ($)</span>
+                      ) : (
+                        <span className="person-weight"> (×{split.toWeight || 1})</span>
                       )}
                     </span>
                   </div>
@@ -1532,7 +1775,7 @@ function App() {
 
 
         <div className="version-tag">
-          v1.5.2
+          v1.6.0
         </div>
 
         {/* JSON Editor Modal */}
@@ -1553,7 +1796,7 @@ function App() {
                 <div className="json-editor-content">
                   <div className="json-schema-info">
                     <h4>JSON Schema:</h4>
-                    <p>Each contributor should have: <code>name</code> (string), <code>share</code> (number 1-10), and <code>items</code> (array).</p>
+                    <p>Each contributor should have: <code>name</code> (string), <code>use_share</code> (boolean), <code>by_amount</code> (string "0" or currency amount), <code>by_share</code> (number 1-10), and <code>items</code> (array).</p>
                     <p>Each item should have: <code>description</code> (string) and <code>value</code> (number).</p>
                   </div>
                   
@@ -1702,7 +1945,14 @@ function App() {
                           <div className="payment-list">
                             {details.paymentsToReceive.map((payment, index) => (
                               <div key={index} className="payment-item">
-                                <span className="payment-from">{payment.from}</span>
+                                <span className="payment-from">
+                                  {payment.from}
+                                  {payment.fromFixed ? (
+                                    <span className="person-fixed-amount"> ($)</span>
+                                  ) : (
+                                    <span className="person-weight"> (×{payment.fromWeight || 1})</span>
+                                  )}
+                                </span>
                                 <span className="payment-arrow">→</span>
                                 <span className="payment-amount">${payment.amount.toFixed(2)}</span>
                               </div>

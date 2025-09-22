@@ -367,18 +367,21 @@ body {
 }
 
 .summary-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  justify-content: space-between;
   gap: 12px;
   margin: 0 auto;
+  flex-wrap: nowrap;
 }
 
 .stat {
   text-align: center;
-  padding: 8px 12px;
+  padding: 8px 10px;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  flex: 1;
+  min-width: 0;
 }
 
 .stat-label {
@@ -655,6 +658,14 @@ body {
   display: flex;
   align-items: center;
   position: relative;
+  width: 90px;  /* Default width for edit mode */
+  margin-right: 8px; /* Match the spacing of weight controls */
+}
+
+/* Make amount input larger only in the top form */
+.input-form > .input-group .amount-input-group {
+  width: auto;  /* Reset width */
+  flex: 1;     /* Take up available space */
 }
 
 .amount-input-group::before {
@@ -783,7 +794,7 @@ body {
   flex: 1;
   width: 100%;
   position: relative;
-  padding-right: 40px; /* Space for delete button */
+  padding-right: 48px; /* Space to match rows below */
 }
 
 .person-name-edit .remove-button {
@@ -847,6 +858,12 @@ body {
 
 .person-weight {
   color: #6c757d;
+  font-size: 0.85em;
+  font-weight: normal;
+}
+
+.person-fixed-amount {
+  color: #ffc107;
   font-size: 0.85em;
   font-weight: normal;
 }
@@ -949,7 +966,72 @@ body {
   outline: none;
 }
 
+.fixed-amount-input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 2px solid #e1e5e9;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  background: white;
+  color: #495057;
+  transition: all 0.2s ease;
+  text-align: center;  /* Match the weight input alignment */
+}
+
+.fixed-amount-input:focus {
+  outline: none;
+  border-color: #6c757d;
+  box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.1);
+}
+
+.App.dark-mode .fixed-amount-input {
+  background: #343a40;
+  border-color: #6c757d;
+  color: #e9ecef;
+}
+
+.App.dark-mode .fixed-amount-input:focus {
+  border-color: #adb5bd;
+  box-shadow: 0 0 0 3px rgba(173, 181, 189, 0.1);
+}
+
 /* Edit shares controls */
+.split-mode-button {
+  padding: 8px 16px;
+  border: 2px solid #6c757d;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  height: 38px;
+  min-width: 120px;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: #343a40 !important;
+  color: #e9ecef !important;
+}
+
+.split-mode-button:active,
+.split-mode-button:focus,
+.split-mode-button:focus-visible,
+.split-mode-button:focus:not(:focus-visible),
+.split-mode-button:hover {
+  border-color: #6c757d !important;
+}
+
+.App.dark-mode .split-mode-button {
+  border-color: #6c757d;
+  background: transparent;
+  color: #e9ecef;
+}
+
+.App.dark-mode .split-mode-button:focus {
+  border-color: #adb5bd;
+  box-shadow: 0 0 0 3px rgba(173, 181, 189, 0.1);
+}
+
 .edit-weight-controls {
   display: flex;
   align-items: stretch;
@@ -1294,7 +1376,10 @@ body {
   display: flex;
   justify-content: center;
   gap: 30px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  margin: 0 auto;
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .export-stat {
@@ -2123,6 +2208,10 @@ body {
 
 .App.dark-mode .person-weight {
   color: #adb5bd;
+}
+
+.App.dark-mode .person-fixed-amount {
+  color: #ffc107;
 }
 
 .App.dark-mode .item-detail {
