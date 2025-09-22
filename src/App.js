@@ -1502,10 +1502,20 @@ function App() {
                                 }
                               }}
                             >
-                              {(isEditMode ? (tempEditStates[`person-${person.id}`]?.isFixed ?? false) : editPersonFixed)
-                                ? 'By Amount'
-                                : 'By Shares'
-                              }
+                              <span className="split-mode-text">
+                                <span className="desktop-only">
+                                  {(isEditMode ? (tempEditStates[`person-${person.id}`]?.isFixed ?? false) : editPersonFixed)
+                                    ? 'By Amount'
+                                    : 'By Shares'
+                                  }
+                                </span>
+                                <span className="mobile-only">
+                                  {(isEditMode ? (tempEditStates[`person-${person.id}`]?.isFixed ?? false) : editPersonFixed)
+                                    ? '$'
+                                    : '÷'
+                                  }
+                                </span>
+                              </span>
                             </button>
                         </div>
                         {(isEditMode ? (tempEditStates[`person-${person.id}`]?.isFixed ?? false) : editPersonFixed) ? (

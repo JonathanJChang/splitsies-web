@@ -659,7 +659,6 @@ body {
   align-items: center;
   position: relative;
   width: 90px;  /* Default width for edit mode */
-  margin-right: 8px; /* Match the spacing of weight controls */
 }
 
 /* Make amount input larger only in the top form */
@@ -996,6 +995,14 @@ body {
 }
 
 /* Edit shares controls */
+.desktop-only {
+  display: inline;  /* Show by default, hide in mobile media query */
+}
+
+.mobile-only {
+  display: none;  /* Hide by default, show in mobile media query */
+}
+
 .split-mode-button {
   padding: 8px 16px;
   border: 2px solid #6c757d;
@@ -1042,7 +1049,6 @@ body {
   height: 38px; /* Match edit person input height */
   width: 90px; /* Fixed width to prevent taking too much space */
   flex-shrink: 0; /* Don't shrink */
-  margin-right: 8px; /* Create gap before delete button */
 }
 
 .edit-weight-input {
@@ -1181,6 +1187,7 @@ body {
   color: #adb5bd;
   font-weight: 500;
   opacity: 0.7;
+  margin-bottom: 25px;  /* Space for the fixed summary footer */
 }
 
 /* Mobile Responsiveness */
@@ -1250,8 +1257,28 @@ body {
   }
   
   .summary-stats {
-    grid-template-columns: repeat(3, 1fr);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
+    padding: 4px 0;  /* Add some vertical padding */
+  }
+
+  .stat {
+    padding: 6px 8px;  /* Slightly reduce padding for mobile */
+    min-width: 0;      /* Allow content to shrink if needed */
+  }
+
+  .stat-label {
+    font-size: 0.7rem;  /* Slightly smaller label on mobile */
+    margin-bottom: 2px;
+  }
+
+  .stat-value {
+    font-size: 0.95rem;  /* Slightly smaller value on mobile */
+  }
+
+  .version-tag {
+    margin-bottom: 60px;  /* Space for the 2x2 grid summary on mobile */
   }
   
   .stat {
@@ -1304,6 +1331,32 @@ body {
 
   .edit-weight-controls {
     width: 90px; /* Wider for better touch targets */
+  }
+
+  /* Reduce split mode button padding on mobile */
+  .split-mode-button {
+    padding: 0 12px;    /* Remove vertical padding */
+    min-width: 50px;    /* Can be smaller with just emoji */
+    font-size: 1.2rem;  /* Larger for better symbol visibility */
+    font-weight: 700;   /* Make symbols bolder */
+    display: flex;      /* Use flexbox for centering */
+    align-items: center;/* Center vertically */
+    justify-content: center; /* Center horizontally */
+  }
+
+  .split-mode-text {
+    line-height: 1;     /* Remove extra line height */
+    display: flex;      /* Use flexbox for alignment */
+    align-items: center;/* Center content vertically */
+  }
+
+  /* Switch between full text and symbols on mobile */
+  .desktop-only {
+    display: none;
+  }
+  
+  .mobile-only {
+    display: inline;
   }
 
   .edit-person-input {
