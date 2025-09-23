@@ -1309,6 +1309,48 @@ function App() {
                 onChange={handleAmountChange}
                 className="input-field"
               />
+      <div className="amount-controls">
+        <button
+          type="button"
+          className="amount-button"
+          onClick={() => {
+            const currentAmount = parseFloat(amount) || 0;
+            setAmount((currentAmount * 1.10).toFixed(2));
+          }}
+        >
+          +10%
+        </button>
+        <button
+          type="button"
+          className="amount-button"
+          onClick={() => {
+            const currentAmount = parseFloat(amount) || 0;
+            setAmount((currentAmount * 1.13).toFixed(2));
+          }}
+        >
+          +13%
+        </button>
+        <button
+          type="button"
+          className="amount-button"
+          onClick={() => {
+            const currentAmount = parseFloat(amount) || 0;
+            setAmount((currentAmount * 1.15).toFixed(2));
+          }}
+        >
+          +15%
+        </button>
+        <button
+          type="button"
+          className="amount-button"
+          onClick={() => {
+            const currentAmount = parseFloat(amount) || 0;
+            setAmount((currentAmount * 1.18).toFixed(2));
+          }}
+        >
+          +18%
+        </button>
+      </div>
             </div>
             <div className="weight-input-group">
               <div className="weight-controls">
