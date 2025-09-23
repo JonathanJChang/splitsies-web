@@ -582,14 +582,14 @@ body {
 }
 
 .edit-button {
-  background: #6c757d;
-  color: white;
+  background: #e1e5e9;
+  color: #495057;
 }
 
 /* Desktop-only hover effects */
 @media (hover: hover) and (pointer: fine) {
   .edit-button:hover {
-    background: #495057;
+    background: #ced4da;
     transform: scale(1.1);
   }
 }
@@ -671,15 +671,134 @@ body {
   content: '$';
   position: absolute;
   left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
   color: #6c757d;
   font-weight: 600;
   z-index: 1;
   pointer-events: none;
+  line-height: 1;
+  display: flex;
+  align-items: center;
 }
 
 .amount-input-group .edit-input,
+.amount-input-group {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border: 2px solid #e1e5e9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f8f9fa;
+  transition: all 0.2s ease;
+}
+
+.amount-input-group:focus-within {
+  border-color: #6c757d;
+  box-shadow: 0 0 0 3px rgba(108, 117, 125, 0.1);
+}
+
 .amount-input-group .input-field {
+  flex: 1;
+  border: none;
   padding-left: 24px; /* Space for $ symbol */
+  padding-right: 200px; /* Space for 4 wider buttons */
+  text-align: left;
+  background: transparent;
+}
+
+.amount-controls {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: stretch;
+}
+
+.amount-button {
+  width: 50px;
+  border: none;
+  background: #e9ecef;
+  color: #495057;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-appearance: none;
+  -webkit-user-select: none;
+}
+
+.amount-button {
+  border-left: 1px solid rgba(233, 236, 239, 0.1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .amount-button {
+    transition: all 0.2s ease;
+  }
+
+  .amount-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(233, 236, 239, 0);
+    transition: background-color 0.2s ease;
+  }
+
+  .amount-button:hover:not(:disabled)::before {
+    background: rgba(233, 236, 239, 0.1);
+  }
+
+  .amount-button:active:not(:disabled)::before {
+    background: rgba(233, 236, 239, 0.2);
+  }
+}
+
+.amount-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Dark mode button styles */
+.App.dark-mode .amount-button {
+  background: #343a40;
+  color: #e9ecef;
+}
+
+.App.dark-mode .amount-button:not(:last-child) {
+  border-right: 1px solid rgba(233, 236, 239, 0.1);
+}
+
+.App.dark-mode .amount-button:hover:not(:disabled)::before {
+  background: rgba(233, 236, 239, 0.1);
+}
+
+.App.dark-mode .amount-button:active:not(:disabled)::before {
+  background: rgba(233, 236, 239, 0.2);
+}
+
+.amount-decrease {
+  border-right: 1px solid #e1e5e9;
+}
+
+.amount-increase {
+  border-left: 1px solid #e1e5e9;
 }
 
 .edit-save-button,
@@ -877,7 +996,7 @@ body {
 
 /* Shares prefix inside input */
 .weight-controls::before {
-  content: 'Shares:';
+  content: 'Shares';
   position: absolute;
   left: 12px;
   top: 50%;
@@ -1016,8 +1135,8 @@ body {
   user-select: none;
   outline: none !important;
   box-shadow: none !important;
-  background-color: #343a40 !important;
-  color: #e9ecef !important;
+  background-color: #e9ecef !important;
+  color: #495057 !important;
 }
 
 .split-mode-button:active,
@@ -1030,8 +1149,8 @@ body {
 
 .App.dark-mode .split-mode-button {
   border-color: #6c757d;
-  background: transparent;
-  color: #e9ecef;
+  background-color: #343a40 !important;
+  color: #e9ecef !important;
 }
 
 .App.dark-mode .split-mode-button:focus {
@@ -2104,6 +2223,35 @@ body {
   background: #495057;
   border: 2px solid #6c757d;
   color: #e9ecef;
+}
+
+.App.dark-mode .amount-input-group {
+  border-color: #495057;
+  background: #343a40;
+}
+
+.App.dark-mode .amount-input-group:focus-within {
+  border-color: #adb5bd;
+  box-shadow: 0 0 0 3px rgba(173, 181, 189, 0.1);
+}
+
+.App.dark-mode .amount-button {
+  background: #343a40;
+  color: #e9ecef;
+  border-color: rgba(233, 236, 239, 0.1);
+}
+
+.App.dark-mode .amount-button:hover:not(:disabled) {
+  background: #495057;
+}
+
+.App.dark-mode .amount-button:active:not(:disabled) {
+  background: #6c757d;
+}
+
+.App.dark-mode .amount-input-group .input-field {
+  border: none;
+  background: transparent;
 }
 
 .App.dark-mode .input-field:focus {

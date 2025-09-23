@@ -2,6 +2,18 @@
 
 All notable changes to Splitsies will be documented in this file.
 
+## [1.6.1] - 2025-09-23
+
+### Changed
+- **UI Improvements** - Enhanced light mode styling for better contrast and consistency
+- **Button Styling** - Adjusted edit button and percentage buttons for better visibility in light mode
+- **Input Labels** - Removed colon from "Shares" label for cleaner appearance
+- **Mobile Optimization** - Added more horizontal padding to percentage buttons
+
+### Fixed
+- **Light Mode Contrast** - Fixed edit button and percentage buttons being too dark in light mode
+- **Button Spacing** - Added consistent separators between percentage buttons
+
 ## [1.6.0] - 2025-09-22
 
 ### Added
